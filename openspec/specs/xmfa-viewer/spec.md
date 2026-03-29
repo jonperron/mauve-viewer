@@ -1,15 +1,13 @@
 ## Purpose
 
 Defines the interactive genome alignment visualization system: multi-panel display layout, LCB blocks and connecting lines, similarity profiles, annotated feature rendering, zoom/scroll navigation, mouse interaction, genome reordering, printing, and image export.
-
 ## Requirements
-
 ### Requirement: Multi-genome alignment visualization
-The system SHALL display genome alignments as a set of horizontal panels, one per input genome, each containing a genome name, coordinate ruler, center line, colored block outlines (LCBs above for forward, below for reverse orientation), and a similarity profile whose height is inversely proportional to average alignment column entropy.
+The system SHALL display genome alignments as a set of horizontal panels, one per input genome, each containing a genome name, coordinate ruler, center line, and colored block outlines (LCBs above for forward, below for reverse orientation).
 
 #### Scenario: Display pairwise alignment
 - **WHEN** user opens an XMFA alignment file containing two genomes
-- **THEN** system displays two horizontal panels with colored LCB blocks, connecting lines between homologous blocks, and similarity profiles inside each block
+- **THEN** system displays two horizontal panels with colored LCB blocks and connecting lines between homologous blocks
 
 #### Scenario: Display inverted regions
 - **WHEN** an LCB is in reverse complement orientation relative to the reference genome
@@ -17,18 +15,18 @@ The system SHALL display genome alignments as a set of horizontal panels, one pe
 
 #### Scenario: Display unaligned regions
 - **WHEN** a genome region has no detectable homology among input genomes
-- **THEN** system displays that region as completely white (no similarity profile) outside any colored block
+- **THEN** system displays that region as completely white outside any colored block
+
+#### Scenario: Display multi-genome alignment
+- **WHEN** user opens an XMFA alignment file containing three or more genomes
+- **THEN** system displays one horizontal panel per genome with LCB blocks and connecting lines between each pair of adjacent panels
 
 ### Requirement: LCB connecting lines
-The system SHALL draw colored lines connecting homologous LCB blocks between genome panels to indicate which regions in each genome are homologous.
+The system SHALL draw colored trapezoid connectors between homologous LCB blocks across adjacent genome panels to indicate which regions in each genome are homologous.
 
 #### Scenario: Show connecting lines
-- **WHEN** an alignment is displayed and LCB connecting lines are enabled
-- **THEN** system draws lines between corresponding block boundaries across genome panels
-
-#### Scenario: Toggle connecting lines
-- **WHEN** user presses Shift+L or uses the View menu
-- **THEN** system toggles the visibility of LCB connecting lines
+- **WHEN** an alignment is displayed with multiple genome panels
+- **THEN** system draws filled trapezoid connectors between corresponding block boundaries across adjacent genome panels
 
 ### Requirement: Annotated feature display
 The system SHALL display annotated genomic features when viewing less than 1 Mbp of sequence. CDS features are white boxes, tRNAs green, rRNAs red, and misc_RNA blue. Hovering shows the /product qualifier; clicking shows full qualifier details and a link to NCBI Entrez.
@@ -93,11 +91,23 @@ The system SHALL support printing the current view (Ctrl+P), page setup, print p
 - **THEN** system renders a publication-quality vector graphic of the alignment view
 
 ### Requirement: Drag-and-drop file loading
-The system SHALL accept alignment files dropped onto the main window for loading.
+The system SHALL accept alignment files dropped onto a drop zone or selected via a file picker dialog. The system SHALL reject files larger than 500 MB.
 
 #### Scenario: Drop alignment file
-- **WHEN** user drags an XMFA or .mauve file onto the main window
+- **WHEN** user drags an XMFA alignment file onto the drop zone
 - **THEN** system loads and displays the alignment
+
+#### Scenario: Select alignment file via picker
+- **WHEN** user clicks the drop zone and selects an XMFA file from the file picker
+- **THEN** system loads and displays the alignment
+
+#### Scenario: Reject oversized file
+- **WHEN** user provides a file larger than 500 MB
+- **THEN** system displays an error message without attempting to parse
+
+#### Scenario: Display parse error
+- **WHEN** user provides a malformed XMFA file
+- **THEN** system displays a descriptive error message without exposing internal paths or stack traces
 
 ### Requirement: Three display modes
 The system SHALL support three display modes depending on data type: ungapped match display (from .mauve files), LCB display with bounding boxes and connecting lines, and full XMFA display with similarity profiles.
@@ -109,3 +119,4 @@ The system SHALL support three display modes depending on data type: ungapped ma
 #### Scenario: Display match-only alignment
 - **WHEN** user opens a .mauve alignment file without full alignment
 - **THEN** system displays ungapped local match regions between genomes
+
