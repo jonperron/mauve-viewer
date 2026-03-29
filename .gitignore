@@ -139,6 +139,9 @@ dist
 !.yarn/sdks
 !.yarn/versions
 
+# Mauve legacy Java application
+mauve/
+
 # Vite files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
