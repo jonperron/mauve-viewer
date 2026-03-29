@@ -10,8 +10,17 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/d3": "^7.4.3",
+    "@vitest/coverage-v8": "^4.1.2",
     "eslint": "^10.1.0",
+    "jsdom": "^29.0.1",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.57.2",
     "vite": "^8.0.3",
     "vitest": "^4.1.2"
+  },
+  "dependencies": {
+    "d3": "^7.9.0"
   }
 }

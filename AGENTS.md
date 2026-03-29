@@ -45,3 +45,6 @@ When completing a task, delegate to subagents for quality assurance:
 - **Linter** — Use the linter agent (`.github/agents/linter.agent.md`) to check code style and catch issues
 - **Test** — Use the test agent (`.github/agents/test.agent.md`) to verify that changes are covered by tests and tests pass
 - **Security** — Use the security agent (`.github/agents/security.agent.md`) to check for vulnerabilities when handling user input, file parsing, or external data
+- **OpenSpec** — Use the openspec agent (`.github/agents/openspec.agent.md`) to update specifications after implementing or modifying features
+
+Specifications must always be up to date at the end of any task that adds, changes, or removes functionality. After completing implementation work, run the OpenSpec subagent to synchronize `openspec/specs/` with the current state of the code.
