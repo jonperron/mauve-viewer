@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "module": "es2022",
+    "target": "es2022",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "noUncheckedIndexedAccess": true,
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src"]
+}

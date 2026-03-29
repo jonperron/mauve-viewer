@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mauve Viewer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #fafafa;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+    h1 { margin-bottom: 1rem; }
+    .drop-zone {
+      width: 960px;
+      min-height: 200px;
+      border: 2px dashed #aaa;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 1rem;
+    }
+    .drop-zone.dragover {
+      border-color: #4a90d9;
+      background: #e8f0fe;
+    }
+    .drop-zone p { color: #888; font-size: 1.1rem; }
+    #viewer { margin-top: 1rem; }
+    .genome-label { font-size: 12px; font-weight: 600; }
+    .ruler text { font-size: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Mauve Genome Alignment Viewer</h1>
+  <div class="drop-zone" id="dropZone">
+    <p>Drop an XMFA alignment file here, or click to select</p>
+    <input type="file" id="fileInput" accept=".xmfa,.alignment" hidden />
+  </div>
+  <div id="viewer"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
