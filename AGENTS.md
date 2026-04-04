@@ -8,18 +8,6 @@ The original Mauve is a Java Swing desktop application. This project rebuilds it
 
 Feature specifications live in `openspec/specs/`. Each subfolder contains a `spec.md` describing a functional area:
 
-- **xmfa-viewer** — Interactive multi-genome alignment visualization with colored LCB blocks, similarity profiles, and annotated features
-- **genome-alignment** — Core alignment via mauveAligner and progressiveMauve algorithms
-- **sequence-navigation** — Feature search and coordinate navigation across genomes
-- **color-schemes** — Eight color scheme options for alignment visualization
-- **rearrangement-analysis** — DCJ, breakpoint, and SCJ distance computation between genomes
-- **contig-reordering** — Draft genome contig reordering relative to a reference (Mauve Contig Mover)
-- **assembly-scoring** — Genome assembly quality evaluation against a reference
-- **analysis-export** — SNP/gap export, permutation export, image export, and batch analysis
-- **file-format-support** — FASTA, GenBank, EMBL, XMFA, and other format support with auto-detection
-- **data-integration** — Database cross-references, RMI remote control, and Gaggle bus integration
-- **plugin-framework** — Lightweight extensibility via ModuleListener interface
-
 Always read the relevant spec before implementing or modifying a feature.
 
 ## Tech Stack
