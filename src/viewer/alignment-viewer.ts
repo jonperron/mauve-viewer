@@ -29,6 +29,8 @@ import { setupAnnotations } from './annotations.ts';
 import type { AnnotationsHandle, AnnotationMap } from './annotations.ts';
 import { createFeatureTooltip } from './feature-tooltip.ts';
 import type { FeatureTooltipHandle } from './feature-tooltip.ts';
+import { createOptionsPanel } from './options-panel.ts';
+import type { OptionsPanelHandle, OptionsState } from './options-panel.ts';
 
 export interface ViewerConfig {
   readonly width: number;
@@ -73,6 +75,7 @@ export interface ViewerHandle {
   readonly toolbarHandle: NavigationToolbarHandle;
   readonly trackControlsHandle: TrackControlsHandle;
   readonly annotationsHandle: AnnotationsHandle | undefined;
+  readonly optionsPanelHandle: OptionsPanelHandle;
   readonly getState: () => ViewerState;
   readonly destroy: () => void;
 }
@@ -94,6 +97,13 @@ function computeTotalHeight(
   return height;
 }
 
+/** Get a genome display label. With genome ID, shows the full filename; without, strips the extension. */
+export function getGenomeLabel(name: string, showGenomeId: boolean): string {
+  if (showGenomeId) return name;
+  const dotIndex = name.lastIndexOf('.');
+  return dotIndex > 0 ? name.slice(0, dotIndex) : name;
+}
+
 export function renderAlignment(
   container: HTMLElement,
   alignment: XmfaAlignment,
@@ -110,6 +120,8 @@ export function renderAlignment(
 
   // Mutable state — held in closure for D3 callbacks (intentional exception to immutability rule)
   let viewerState = createViewerState(alignment, config);
+  // Mutable options state — held in closure for options callbacks (intentional exception to immutability rule)
+  let optionsState: OptionsState = { showGenomeId: true, showConnectingLines: true, showFeatures: true, showContigs: true };
 
   const totalHeight = computeTotalHeight(viewerState, config);
 
@@ -131,7 +143,7 @@ export function renderAlignment(
     .attr('class', 'alignment-root')
     .attr('transform', `translate(${margin.left},${margin.top})`);
 
-  renderAllPanels(root, viewerState, lcbs, colors, config);
+  renderAllPanels(root, viewerState, lcbs, colors, config, optionsState.showGenomeId);
   renderConnectingLines(root, viewerState, lcbs, colors, config);
 
   const svgNode = svg.node()!;
@@ -157,8 +169,11 @@ export function renderAlignment(
 
   const zoomHandle = setupZoom(svgNode, viewerState, (transform) => {
     viewerState = applyZoomTransform(viewerState, transform);
-    updatePanelsOnZoom(root, viewerState, lcbs, colors, config);
-    annotationsHandle?.update(viewerState);
+    updatePanelsOnZoom(root, viewerState, lcbs, colors, config, optionsState.showConnectingLines);
+    annotationsHandle?.update(viewerState, {
+      showFeatures: optionsState.showFeatures,
+      showContigs: optionsState.showContigs,
+    });
     cursorHandle.update(viewerState);
   });
 
@@ -166,7 +181,12 @@ export function renderAlignment(
     alignOnPosition(svgNode, zoomHandle, viewerState, config, sourceGenomeIndex, position);
   });
 
-  const toolbarHandle = createNavigationToolbar(container, {
+  // Controls bar: groups navigation toolbar and options panel on one line
+  const controlsBar = document.createElement('div');
+  controlsBar.className = 'viewer-controls-bar';
+  container.insertBefore(controlsBar, container.firstChild);
+
+  const toolbarHandle = createNavigationToolbar(controlsBar, {
     onZoomIn: () => zoomHandle.zoomIn(),
     onZoomOut: () => zoomHandle.zoomOut(),
     onPanLeft: () => zoomHandle.panLeft(),
@@ -191,9 +211,14 @@ export function renderAlignment(
     root.selectAll('*').remove();
     const newHeight = computeTotalHeight(viewerState, config);
     svg.attr('height', newHeight).attr('viewBox', `0 0 ${width} ${newHeight}`);
-    renderAllPanels(root, viewerState, lcbs, colors, config);
-    renderConnectingLines(root, viewerState, lcbs, colors, config);
-    annotationsHandle?.update(viewerState);
+    renderAllPanels(root, viewerState, lcbs, colors, config, optionsState.showGenomeId);
+    if (optionsState.showConnectingLines) {
+      renderConnectingLines(root, viewerState, lcbs, colors, config);
+    }
+    annotationsHandle?.update(viewerState, {
+      showFeatures: optionsState.showFeatures,
+      showContigs: optionsState.showContigs,
+    });
     cursorHandle.rebuildOverlays(viewerState);
   }
 
@@ -263,6 +288,47 @@ export function renderAlignment(
     );
   }
 
+  /** Update all genome labels to reflect the current showGenomeId option */
+  function updateGenomeLabels(): void {
+    for (let di = 0; di < viewerState.alignment.genomes.length; di++) {
+      const dataIndex = viewerState.genomeOrder[di]!;
+      const genome = viewerState.alignment.genomes[dataIndex]!;
+      const label = getGenomeLabel(genome.name, optionsState.showGenomeId);
+      root.select(`.genome-panel[data-genome-data-index="${dataIndex}"] .genome-label`)
+        .text(label);
+    }
+  }
+
+  const optionsPanelHandle = createOptionsPanel(controlsBar, {
+    onToggleGenomeId: (enabled) => {
+      optionsState = { ...optionsState, showGenomeId: enabled };
+      updateGenomeLabels();
+    },
+    onToggleConnectingLines: (enabled) => {
+      optionsState = { ...optionsState, showConnectingLines: enabled };
+      if (enabled) {
+        renderConnectingLines(root, viewerState, lcbs, colors, config);
+        updateConnectingLinesOnZoom(root, viewerState, lcbs, config);
+      } else {
+        root.selectAll('.lcb-lines').remove();
+      }
+    },
+    onToggleFeatures: (enabled) => {
+      optionsState = { ...optionsState, showFeatures: enabled };
+      annotationsHandle?.update(viewerState, {
+        showFeatures: enabled,
+        showContigs: optionsState.showContigs,
+      });
+    },
+    onToggleContigs: (enabled) => {
+      optionsState = { ...optionsState, showContigs: enabled };
+      annotationsHandle?.update(viewerState, {
+        showFeatures: optionsState.showFeatures,
+        showContigs: enabled,
+      });
+    },
+  });
+
   return {
     svg: svgNode,
     zoomHandle,
@@ -270,12 +336,15 @@ export function renderAlignment(
     toolbarHandle,
     trackControlsHandle,
     annotationsHandle,
+    optionsPanelHandle,
     getState: () => viewerState,
     destroy: () => {
       annotationsHandle?.destroy();
       tooltipHandle?.destroy();
+      optionsPanelHandle.destroy();
       trackControlsHandle.destroy();
       toolbarHandle.destroy();
+      controlsBar.remove();
       zoomHandle.destroy();
       cursorHandle.destroy();
       wrapper.remove();
@@ -290,6 +359,7 @@ function renderAllPanels(
   lcbs: readonly Lcb[],
   colors: readonly string[],
   config: ViewerConfig,
+  showGenomeId: boolean,
 ): void {
   const { panelHeight } = config;
   const innerWidth = state.innerWidth;
@@ -302,9 +372,9 @@ function renderAllPanels(
     const isHidden = state.hiddenGenomes.has(dataIndex);
 
     if (isHidden) {
-      renderHiddenPanel(root, genome, panelY, dataIndex, innerWidth);
+      renderHiddenPanel(root, genome, panelY, dataIndex, innerWidth, showGenomeId);
     } else {
-      renderGenomePanel(root, genome, panelY, dataIndex, lcbs, colors, panelHeight, innerWidth, state.referenceGenomeIndex);
+      renderGenomePanel(root, genome, panelY, dataIndex, lcbs, colors, panelHeight, innerWidth, state.referenceGenomeIndex, showGenomeId);
     }
   }
 }
@@ -319,6 +389,7 @@ function renderGenomePanel(
   _panelHeight: number,
   innerWidth: number,
   referenceGenomeIndex: number,
+  showGenomeId: boolean,
 ): void {
   const xScale = d3
     .scaleLinear()
@@ -339,7 +410,7 @@ function renderGenomePanel(
     .attr('font-family', 'sans-serif')
     .attr('font-size', '10px')
     .attr('fill', '#888')
-    .text(genome.name);
+    .text(getGenomeLabel(genome.name, showGenomeId));
 
   panel.append('g').attr('class', 'regions');
 
@@ -354,6 +425,7 @@ function renderHiddenPanel(
   panelY: number,
   genomeDataIndex: number,
   innerWidth: number,
+  showGenomeId: boolean,
 ): void {
   const panel = root
     .append('g')
@@ -369,7 +441,7 @@ function renderHiddenPanel(
     .attr('font-family', 'sans-serif')
     .attr('font-size', '10px')
     .attr('fill', '#222')
-    .text(genome.name);
+    .text(getGenomeLabel(genome.name, showGenomeId));
 
   panel
     .append('rect')
@@ -510,6 +582,7 @@ function updatePanelsOnZoom(
   lcbs: readonly Lcb[],
   colors: readonly string[],
   config: ViewerConfig,
+  showConnectingLines: boolean,
 ): void {
   const genomeCount = state.alignment.genomes.length;
   for (let di = 0; di < genomeCount; di++) {
@@ -539,8 +612,10 @@ function updatePanelsOnZoom(
       });
   }
 
-  // Update connecting lines
-  updateConnectingLinesOnZoom(root, state, lcbs, config);
+  // Update connecting lines only if visible
+  if (showConnectingLines) {
+    updateConnectingLinesOnZoom(root, state, lcbs, config);
+  }
 }
 
 /** Update connecting midpoint lines when zoom changes */
