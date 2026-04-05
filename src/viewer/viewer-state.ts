@@ -2,13 +2,19 @@ import * as d3 from 'd3';
 import type { XmfaAlignment, Lcb } from '../xmfa/types.ts';
 import type { ViewerConfig } from './alignment-viewer.ts';
 
-/** Immutable viewer state for zoom/pan and genome scales */
+/** Immutable viewer state for zoom/pan, genome display order, and reference */
 export interface ViewerState {
   readonly alignment: XmfaAlignment;
   readonly config: ViewerConfig;
   readonly innerWidth: number;
   readonly baseScales: readonly d3.ScaleLinear<number, number>[];
   readonly zoomTransform: d3.ZoomTransform;
+  /** Display order: genomeOrder[displayIndex] = dataIndex */
+  readonly genomeOrder: readonly number[];
+  /** Data index of the reference genome */
+  readonly referenceGenomeIndex: number;
+  /** Set of data indices of hidden genomes */
+  readonly hiddenGenomes: ReadonlySet<number>;
 }
 
 /** A homologous position mapped across genomes */
@@ -27,12 +33,16 @@ export function createViewerState(
   const baseScales = alignment.genomes.map((genome) =>
     d3.scaleLinear().domain([1, genome.length]).range([0, innerWidth]),
   );
+  const genomeOrder = alignment.genomes.map((_, i) => i);
   return {
     alignment,
     config,
     innerWidth,
     baseScales,
     zoomTransform: d3.zoomIdentity,
+    genomeOrder,
+    referenceGenomeIndex: 0,
+    hiddenGenomes: new Set(),
   };
 }
 
@@ -162,4 +172,87 @@ export function positionToPixel(
 ): number {
   const scale = getZoomedScale(state, genomeIndex);
   return scale(position);
+}
+
+/** Get the visible (non-hidden) genome data indices in display order */
+export function getVisibleGenomeOrder(state: ViewerState): readonly number[] {
+  return state.genomeOrder.filter((gi) => !state.hiddenGenomes.has(gi));
+}
+
+/** Move a genome up in display order. Returns unchanged state if already at top. */
+export function moveGenomeUp(state: ViewerState, displayIndex: number): ViewerState {
+  if (displayIndex <= 0 || displayIndex >= state.genomeOrder.length) return state;
+  const newOrder = [...state.genomeOrder];
+  const temp = newOrder[displayIndex - 1]!;
+  newOrder[displayIndex - 1] = newOrder[displayIndex]!;
+  newOrder[displayIndex] = temp;
+  return { ...state, genomeOrder: newOrder };
+}
+
+/** Move a genome down in display order. Returns unchanged state if already at bottom. */
+export function moveGenomeDown(state: ViewerState, displayIndex: number): ViewerState {
+  if (displayIndex < 0 || displayIndex >= state.genomeOrder.length - 1) return state;
+  const newOrder = [...state.genomeOrder];
+  const temp = newOrder[displayIndex + 1]!;
+  newOrder[displayIndex + 1] = newOrder[displayIndex]!;
+  newOrder[displayIndex] = temp;
+  return { ...state, genomeOrder: newOrder };
+}
+
+/** Set the reference genome by data index. Returns unchanged state if already reference. */
+export function setReferenceGenome(state: ViewerState, dataIndex: number): ViewerState {
+  if (dataIndex === state.referenceGenomeIndex) return state;
+  if (dataIndex < 0 || dataIndex >= state.alignment.genomes.length) return state;
+  return { ...state, referenceGenomeIndex: dataIndex };
+}
+
+/** Hide a genome by data index. Returns unchanged state if already hidden or if it's the last visible genome. */
+export function hideGenome(state: ViewerState, dataIndex: number): ViewerState {
+  if (state.hiddenGenomes.has(dataIndex)) return state;
+  if (dataIndex < 0 || dataIndex >= state.alignment.genomes.length) return state;
+  if (state.hiddenGenomes.size >= state.alignment.genomes.length - 1) return state;
+  const newHidden = new Set(state.hiddenGenomes);
+  newHidden.add(dataIndex);
+  return { ...state, hiddenGenomes: newHidden };
+}
+
+/** Show a hidden genome by data index. Returns unchanged state if not hidden. */
+export function showGenome(state: ViewerState, dataIndex: number): ViewerState {
+  if (!state.hiddenGenomes.has(dataIndex)) return state;
+  const newHidden = new Set(state.hiddenGenomes);
+  newHidden.delete(dataIndex);
+  return { ...state, hiddenGenomes: newHidden };
+}
+
+/**
+ * Compute visual reverse state for an LCB in a given genome, relative to the reference.
+ * Uses XOR: if the reference genome is reversed in this LCB, flip all genomes.
+ */
+export function isVisuallyReverse(
+  lcb: Lcb,
+  genomeDataIndex: number,
+  referenceGenomeIndex: number,
+): boolean {
+  const refReverse = lcb.reverse[referenceGenomeIndex] ?? false;
+  const genomeReverse = lcb.reverse[genomeDataIndex] ?? false;
+  return refReverse !== genomeReverse;
+}
+
+/** Height of a collapsed hidden genome panel */
+export const HIDDEN_PANEL_HEIGHT = 20;
+
+/** Compute Y offset for a panel at a given display index */
+export function computePanelY(
+  state: ViewerState,
+  config: ViewerConfig,
+  displayIndex: number,
+): number {
+  const { panelHeight, panelGap } = config;
+  let y = 0;
+  for (let di = 0; di < displayIndex; di++) {
+    const dataIndex = state.genomeOrder[di]!;
+    const isHidden = state.hiddenGenomes.has(dataIndex);
+    y += (isHidden ? HIDDEN_PANEL_HEIGHT : panelHeight) + panelGap;
+  }
+  return y;
 }

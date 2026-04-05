@@ -9,6 +9,13 @@ import {
   findHomologousPositions,
   pixelToPosition,
   positionToPixel,
+  moveGenomeUp,
+  moveGenomeDown,
+  setReferenceGenome,
+  hideGenome,
+  showGenome,
+  getVisibleGenomeOrder,
+  isVisuallyReverse,
 } from './viewer-state.ts';
 import type { XmfaAlignment } from '../xmfa/types.ts';
 import type { ViewerConfig } from './alignment-viewer.ts';
@@ -227,5 +234,265 @@ describe('pixelToPosition and positionToPixel', () => {
     const pixel = positionToPixel(zoomed, 0, pos);
     const roundTripped = pixelToPosition(zoomed, 0, pixel);
     expect(roundTripped).toBe(pos);
+  });
+});
+
+function makeThreeGenomeAlignment(): XmfaAlignment {
+  return {
+    header: {
+      formatVersion: 'Mauve1',
+      sequenceCount: 3,
+      sequenceEntries: [
+        { index: 1, file: 'g1.fa', format: 'FastA' },
+        { index: 2, file: 'g2.fa', format: 'FastA' },
+        { index: 3, file: 'g3.fa', format: 'FastA' },
+      ],
+    },
+    blocks: [],
+    lcbs: [
+      { id: 0, left: [100, 200, 300], right: [400, 500, 600], reverse: [false, true, false], weight: 301 },
+    ],
+    genomes: [
+      { index: 1, name: 'g1.fa', length: 1000, format: 'FastA' },
+      { index: 2, name: 'g2.fa', length: 1200, format: 'FastA' },
+      { index: 3, name: 'g3.fa', length: 900, format: 'FastA' },
+    ],
+  };
+}
+
+describe('createViewerState (track management fields)', () => {
+  it('should initialize genomeOrder as sequential indices', () => {
+    const state = createViewerState(makeAlignment(), TEST_CONFIG);
+    expect(state.genomeOrder).toEqual([0, 1]);
+  });
+
+  it('should initialize referenceGenomeIndex to 0', () => {
+    const state = createViewerState(makeAlignment(), TEST_CONFIG);
+    expect(state.referenceGenomeIndex).toBe(0);
+  });
+
+  it('should initialize hiddenGenomes as empty set', () => {
+    const state = createViewerState(makeAlignment(), TEST_CONFIG);
+    expect(state.hiddenGenomes.size).toBe(0);
+  });
+
+  it('should initialize with three genomes', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    expect(state.genomeOrder).toEqual([0, 1, 2]);
+  });
+});
+
+describe('moveGenomeUp', () => {
+  it('should swap a genome with the one above it', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const updated = moveGenomeUp(state, 1);
+    expect(updated.genomeOrder).toEqual([1, 0, 2]);
+  });
+
+  it('should return unchanged state if at top (displayIndex 0)', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const updated = moveGenomeUp(state, 0);
+    expect(updated).toBe(state);
+  });
+
+  it('should return unchanged state for negative index', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const updated = moveGenomeUp(state, -1);
+    expect(updated).toBe(state);
+  });
+
+  it('should return unchanged state for out-of-bounds index', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const updated = moveGenomeUp(state, 5);
+    expect(updated).toBe(state);
+  });
+
+  it('should not mutate the original state', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    moveGenomeUp(state, 1);
+    expect(state.genomeOrder).toEqual([0, 1, 2]);
+  });
+
+  it('should swap last genome up', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const updated = moveGenomeUp(state, 2);
+    expect(updated.genomeOrder).toEqual([0, 2, 1]);
+  });
+});
+
+describe('moveGenomeDown', () => {
+  it('should swap a genome with the one below it', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const updated = moveGenomeDown(state, 0);
+    expect(updated.genomeOrder).toEqual([1, 0, 2]);
+  });
+
+  it('should return unchanged state if at bottom', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const updated = moveGenomeDown(state, 2);
+    expect(updated).toBe(state);
+  });
+
+  it('should return unchanged state for negative index', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const updated = moveGenomeDown(state, -1);
+    expect(updated).toBe(state);
+  });
+
+  it('should not mutate the original state', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    moveGenomeDown(state, 0);
+    expect(state.genomeOrder).toEqual([0, 1, 2]);
+  });
+});
+
+describe('setReferenceGenome', () => {
+  it('should set a new reference genome', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const updated = setReferenceGenome(state, 1);
+    expect(updated.referenceGenomeIndex).toBe(1);
+  });
+
+  it('should return unchanged state if already reference', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const updated = setReferenceGenome(state, 0);
+    expect(updated).toBe(state);
+  });
+
+  it('should return unchanged state for out-of-bounds index', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const updated = setReferenceGenome(state, 99);
+    expect(updated).toBe(state);
+  });
+
+  it('should return unchanged state for negative index', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const updated = setReferenceGenome(state, -1);
+    expect(updated).toBe(state);
+  });
+
+  it('should not mutate the original state', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    setReferenceGenome(state, 2);
+    expect(state.referenceGenomeIndex).toBe(0);
+  });
+});
+
+describe('hideGenome', () => {
+  it('should hide a genome', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const updated = hideGenome(state, 1);
+    expect(updated.hiddenGenomes.has(1)).toBe(true);
+    expect(updated.hiddenGenomes.size).toBe(1);
+  });
+
+  it('should return unchanged state if already hidden', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const hidden = hideGenome(state, 1);
+    const again = hideGenome(hidden, 1);
+    expect(again).toBe(hidden);
+  });
+
+  it('should return unchanged state for out-of-bounds index', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const updated = hideGenome(state, 99);
+    expect(updated).toBe(state);
+  });
+
+  it('should not mutate the original state', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    hideGenome(state, 1);
+    expect(state.hiddenGenomes.size).toBe(0);
+  });
+
+  it('should prevent hiding the last visible genome', () => {
+    const state = createViewerState(makeAlignment(), TEST_CONFIG);
+    const hidden1 = hideGenome(state, 0);
+    expect(hidden1.hiddenGenomes.has(0)).toBe(true);
+    // Trying to hide the second genome should fail (would leave 0 visible)
+    const hidden2 = hideGenome(hidden1, 1);
+    expect(hidden2).toBe(hidden1);
+    expect(hidden2.hiddenGenomes.has(1)).toBe(false);
+  });
+});
+
+describe('showGenome', () => {
+  it('should show a hidden genome', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const hidden = hideGenome(state, 1);
+    const shown = showGenome(hidden, 1);
+    expect(shown.hiddenGenomes.has(1)).toBe(false);
+    expect(shown.hiddenGenomes.size).toBe(0);
+  });
+
+  it('should return unchanged state if not hidden', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const updated = showGenome(state, 1);
+    expect(updated).toBe(state);
+  });
+
+  it('should not mutate the original state', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const hidden = hideGenome(state, 1);
+    showGenome(hidden, 1);
+    expect(hidden.hiddenGenomes.has(1)).toBe(true);
+  });
+});
+
+describe('getVisibleGenomeOrder', () => {
+  it('should return all genomes when none hidden', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    expect(getVisibleGenomeOrder(state)).toEqual([0, 1, 2]);
+  });
+
+  it('should exclude hidden genomes', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const hidden = hideGenome(state, 1);
+    expect(getVisibleGenomeOrder(hidden)).toEqual([0, 2]);
+  });
+
+  it('should respect display order', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const reordered = moveGenomeDown(state, 0);
+    expect(getVisibleGenomeOrder(reordered)).toEqual([1, 0, 2]);
+  });
+
+  it('should combine reorder with hide', () => {
+    const state = createViewerState(makeThreeGenomeAlignment(), TEST_CONFIG);
+    const reordered = moveGenomeDown(state, 0);       // [1, 0, 2]
+    const hidden = hideGenome(reordered, 0);           // hide data index 0
+    expect(getVisibleGenomeOrder(hidden)).toEqual([1, 2]);
+  });
+});
+
+describe('isVisuallyReverse', () => {
+  it('should return original reverse when reference is forward', () => {
+    // LCB: g0=forward, g1=reverse, g2=forward
+    const lcb = makeThreeGenomeAlignment().lcbs[0]!;
+    expect(isVisuallyReverse(lcb, 0, 0)).toBe(false);  // g0 forward, ref=g0 forward
+    expect(isVisuallyReverse(lcb, 1, 0)).toBe(true);   // g1 reverse, ref=g0 forward
+    expect(isVisuallyReverse(lcb, 2, 0)).toBe(false);  // g2 forward, ref=g0 forward
+  });
+
+  it('should flip all when reference is reverse in this LCB', () => {
+    // LCB: g0=forward, g1=reverse, g2=forward. Reference=g1 (reverse)
+    const lcb = makeThreeGenomeAlignment().lcbs[0]!;
+    expect(isVisuallyReverse(lcb, 0, 1)).toBe(true);   // XOR: false != true = true
+    expect(isVisuallyReverse(lcb, 1, 1)).toBe(false);  // XOR: true != true = false (ref always forward)
+    expect(isVisuallyReverse(lcb, 2, 1)).toBe(true);   // XOR: false != true = true
+  });
+
+  it('should handle LCB where reference is forward (no flip)', () => {
+    // All-forward LCB
+    const lcb = { id: 0, left: [100, 200], right: [400, 500], reverse: [false, false], weight: 301 };
+    expect(isVisuallyReverse(lcb, 0, 0)).toBe(false);
+    expect(isVisuallyReverse(lcb, 1, 0)).toBe(false);
+  });
+
+  it('should handle all-reverse LCB with reference at index 0', () => {
+    const lcb = { id: 0, left: [100, 200], right: [400, 500], reverse: [true, true], weight: 301 };
+    // ref=g0 (reverse), so both get flipped
+    expect(isVisuallyReverse(lcb, 0, 0)).toBe(false);  // both true => XOR = false
+    expect(isVisuallyReverse(lcb, 1, 0)).toBe(false);  // both true => XOR = false
   });
 });
