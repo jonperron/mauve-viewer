@@ -47,7 +47,7 @@ export function setupZoom(
 
   const zoom = d3.zoom<SVGSVGElement, unknown>()
     .scaleExtent([zoomConfig.minScale, zoomConfig.maxScale])
-    .translateExtent([[-width, 0], [width * 2, 0]])
+    .translateExtent([[0, 0], [width * 2, 0]])
     .extent([[0, 0], [width, state.config.panelHeight]])
     .filter((event: Event) => {
       // Allow Ctrl+wheel for zoom, mousedown for pan, dblclick disabled
@@ -98,7 +98,8 @@ export function setupZoom(
   function panLeft(): void {
     const current = getCurrentTransform();
     const shiftAmount = width * zoomConfig.scrollPercent;
-    applyTransform(d3.zoomIdentity.translate(current.x + shiftAmount, 0).scale(current.k));
+    const newX = Math.min(current.x + shiftAmount, 0);
+    applyTransform(d3.zoomIdentity.translate(newX, 0).scale(current.k));
   }
 
   function panRight(): void {
@@ -131,7 +132,8 @@ export function setupZoom(
           ? zoomConfig.acceleratedScrollPercent
           : zoomConfig.scrollPercent;
         const shift = width * percent;
-        applyTransform(d3.zoomIdentity.translate(current.x + shift, 0).scale(current.k));
+        const newX = Math.min(current.x + shift, 0);
+        applyTransform(d3.zoomIdentity.translate(newX, 0).scale(current.k));
         break;
       }
       case 'ArrowRight': {
