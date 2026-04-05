@@ -116,11 +116,27 @@ describe('setupZoom', () => {
     const transforms: d3.ZoomTransform[] = [];
     const handle = setupZoom(svg, state, (t) => transforms.push(t));
 
+    // First pan right to move away from origin, then pan left back toward 0
+    handle.panRight();
+    const afterRight = transforms[transforms.length - 1]!;
+    expect(afterRight.x).toBeLessThan(0);
+
+    handle.panLeft();
+    const afterLeft = transforms[transforms.length - 1]!;
+    expect(afterLeft.x).toBeGreaterThan(afterRight.x);
+
+    handle.destroy();
+  });
+
+  it('should clamp panLeft at zero when already at origin', () => {
+    const transforms: d3.ZoomTransform[] = [];
+    const handle = setupZoom(svg, state, (t) => transforms.push(t));
+
     handle.panLeft();
 
     expect(transforms.length).toBeGreaterThan(0);
     const last = transforms[transforms.length - 1]!;
-    expect(last.x).toBeGreaterThan(0);
+    expect(last.x).toBe(0);
 
     handle.destroy();
   });
@@ -214,13 +230,33 @@ describe('setupZoom', () => {
     const transforms: d3.ZoomTransform[] = [];
     const handle = setupZoom(svg, state, (t) => transforms.push(t));
 
+    // First scroll right, then scroll left back toward 0
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowRight', ctrlKey: true, bubbles: true }),
+    );
+    const afterRight = transforms[transforms.length - 1]!;
+    expect(afterRight.x).toBeLessThan(0);
+
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowLeft', ctrlKey: true, bubbles: true }),
+    );
+    const afterLeft = transforms[transforms.length - 1]!;
+    expect(afterLeft.x).toBeGreaterThan(afterRight.x);
+
+    handle.destroy();
+  });
+
+  it('should clamp Ctrl+ArrowLeft at zero when at origin', () => {
+    const transforms: d3.ZoomTransform[] = [];
+    const handle = setupZoom(svg, state, (t) => transforms.push(t));
+
     document.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowLeft', ctrlKey: true, bubbles: true }),
     );
 
     expect(transforms.length).toBeGreaterThan(0);
     const last = transforms[transforms.length - 1]!;
-    expect(last.x).toBeGreaterThan(0);
+    expect(last.x).toBe(0);
 
     handle.destroy();
   });
