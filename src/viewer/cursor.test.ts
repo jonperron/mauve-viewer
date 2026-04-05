@@ -220,8 +220,8 @@ describe('setupCursor standalone', () => {
     g.append('rect')
       .attr('class', 'lcb-block')
       .attr('data-lcb-index', '0')
-      .attr('fill-opacity', 0.85)
-      .attr('stroke-width', 2.5);
+      .attr('stroke', '#222')
+      .attr('stroke-width', 2);
 
     const state = createViewerState(makeAlignment(), TEST_CONFIG);
     const handle = setupCursor(svg, state, TEST_CONFIG, () => {});
@@ -233,8 +233,8 @@ describe('setupCursor standalone', () => {
     overlay.dispatchEvent(outEvent);
 
     const block = svg.querySelector('.lcb-block');
-    expect(block?.getAttribute('fill-opacity')).toBe('0.6');
-    expect(block?.getAttribute('stroke-width')).toBe('1');
+    expect(block?.getAttribute('stroke')).toBeNull();
+    expect(block?.getAttribute('stroke-width')).toBeNull();
 
     handle.destroy();
   });

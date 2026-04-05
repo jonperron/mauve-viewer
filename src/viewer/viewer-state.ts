@@ -31,7 +31,7 @@ export function createViewerState(
 ): ViewerState {
   const innerWidth = config.width - config.margin.left - config.margin.right;
   const baseScales = alignment.genomes.map((genome) =>
-    d3.scaleLinear().domain([1, genome.length]).range([0, innerWidth]),
+    d3.scaleLinear().domain([0, genome.length]).range([1, innerWidth + 1]),
   );
   const genomeOrder = alignment.genomes.map((_, i) => i);
   return {
@@ -239,7 +239,7 @@ export function isVisuallyReverse(
 }
 
 /** Height of a collapsed hidden genome panel */
-export const HIDDEN_PANEL_HEIGHT = 20;
+export const HIDDEN_PANEL_HEIGHT = 35;
 
 /** Compute Y offset for a panel at a given display index */
 export function computePanelY(

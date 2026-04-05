@@ -211,29 +211,28 @@ export function setupCursor(
         return d3.select(this).attr('data-lcb-index') === String(lcbIndex);
       })
       .attr('stroke', '#222')
-      .attr('stroke-width', 2.5)
-      .attr('fill-opacity', 0.85);
+      .attr('stroke-width', 2)
+      .raise();
 
-    // Highlight connecting lines
+    // Highlight connecting lines (backbone)
     svgSelection
       .selectAll('.lcb-connector')
       .filter(function () {
         return d3.select(this).attr('data-lcb-index') === String(lcbIndex);
       })
-      .attr('fill-opacity', 0.45)
-      .attr('stroke-width', 1.5);
+      .attr('stroke-width', 5)
+      .raise();
   }
 
   function clearHighlight(): void {
     svgSelection
       .selectAll('.lcb-block')
-      .attr('stroke-width', 1)
-      .attr('fill-opacity', 0.6);
+      .attr('stroke', null)
+      .attr('stroke-width', null);
 
     svgSelection
       .selectAll('.lcb-connector')
-      .attr('fill-opacity', 0.2)
-      .attr('stroke-width', 0.5);
+      .attr('stroke-width', 1);
   }
 
   function updateInfo(genomeDataIndex: number, position: number): void {

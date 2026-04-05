@@ -61,8 +61,8 @@ describe('createViewerState', () => {
 
   it('should create one base scale per genome', () => {
     const state = createViewerState(makeAlignment(), TEST_CONFIG);
-    expect(state.baseScales[0]!.domain()).toEqual([1, 1000]);
-    expect(state.baseScales[1]!.domain()).toEqual([1, 1200]);
+    expect(state.baseScales[0]!.domain()).toEqual([0, 1000]);
+    expect(state.baseScales[1]!.domain()).toEqual([0, 1200]);
   });
 });
 
@@ -90,7 +90,7 @@ describe('getZoomedScale', () => {
   it('should return base scale when no zoom applied', () => {
     const state = createViewerState(makeAlignment(), TEST_CONFIG);
     const scale = getZoomedScale(state, 0);
-    expect(scale.domain()).toEqual([1, 1000]);
+    expect(scale.domain()).toEqual([0, 1000]);
   });
 
   it('should return rescaled domain when zoomed in', () => {
@@ -100,7 +100,7 @@ describe('getZoomedScale', () => {
 
     // At 2x zoom, the visible domain should be halved
     const [start, end] = scale.domain();
-    expect(end - start).toBeCloseTo(999 / 2, 0);
+    expect(end - start).toBeCloseTo(1000 / 2, 0);
   });
 
   it('should throw for invalid genome index', () => {
@@ -113,7 +113,7 @@ describe('getVisibleDomain', () => {
   it('should return full domain at identity zoom', () => {
     const state = createViewerState(makeAlignment(), TEST_CONFIG);
     const [start, end] = getVisibleDomain(state, 0);
-    expect(start).toBeCloseTo(1, 0);
+    expect(start).toBeCloseTo(0, 0);
     expect(end).toBeCloseTo(1000, 0);
   });
 });
@@ -122,14 +122,14 @@ describe('getVisibleRangeSize', () => {
   it('should return full range at identity zoom', () => {
     const state = createViewerState(makeAlignment(), TEST_CONFIG);
     const size = getVisibleRangeSize(state, 0);
-    expect(size).toBeCloseTo(999, 0);
+    expect(size).toBeCloseTo(1000, 0);
   });
 
   it('should return half range at 2x zoom', () => {
     const state = createViewerState(makeAlignment(), TEST_CONFIG);
     const zoomed = applyZoomTransform(state, d3.zoomIdentity.scale(2));
     const size = getVisibleRangeSize(zoomed, 0);
-    expect(size).toBeCloseTo(999 / 2, 0);
+    expect(size).toBeCloseTo(1000 / 2, 0);
   });
 });
 

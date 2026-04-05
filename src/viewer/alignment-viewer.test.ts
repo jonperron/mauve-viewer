@@ -84,14 +84,8 @@ describe('renderAlignment', () => {
   it('should render connecting lines between panels', () => {
     renderAlignment(container, makeAlignment());
     const connectors = container.querySelectorAll('.lcb-connector');
-    // 2 LCBs, 1 gap between 2 genomes = 2 connectors
+    // 2 LCBs, each with one midpoint-line path
     expect(connectors).toHaveLength(2);
-  });
-
-  it('should render center lines', () => {
-    renderAlignment(container, makeAlignment());
-    const lines = container.querySelectorAll('.center-line');
-    expect(lines).toHaveLength(2);
   });
 
   it('should render coordinate rulers', () => {
@@ -149,9 +143,9 @@ describe('renderAlignment', () => {
     renderAlignment(container, alignment);
     const panels = container.querySelectorAll('.genome-panel');
     expect(panels).toHaveLength(3);
-    // 1 LCB x 2 gaps = 2 connecting lines
+    // 1 LCB with one midpoint-line path
     const connectors = container.querySelectorAll('.lcb-connector');
-    expect(connectors).toHaveLength(2);
+    expect(connectors).toHaveLength(1);
   });
 
   it('should accept custom config', () => {
