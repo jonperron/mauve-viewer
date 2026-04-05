@@ -12,6 +12,8 @@ import { setupZoom } from './zoom.ts';
 import type { ZoomHandle } from './zoom.ts';
 import { setupCursor } from './cursor.ts';
 import type { CursorHandle } from './cursor.ts';
+import { createNavigationToolbar } from './navigation-toolbar.ts';
+import type { NavigationToolbarHandle } from './navigation-toolbar.ts';
 
 export interface ViewerConfig {
   readonly width: number;
@@ -44,6 +46,7 @@ export interface ViewerHandle {
   readonly svg: SVGSVGElement;
   readonly zoomHandle: ZoomHandle;
   readonly cursorHandle: CursorHandle;
+  readonly toolbarHandle: NavigationToolbarHandle;
   readonly getState: () => ViewerState;
   readonly destroy: () => void;
 }
@@ -102,12 +105,22 @@ export function renderAlignment(
     alignOnPosition(svgNode, zoomHandle, viewerState, config, sourceGenomeIndex, position);
   });
 
+  const toolbarHandle = createNavigationToolbar(container, {
+    onZoomIn: () => zoomHandle.zoomIn(),
+    onZoomOut: () => zoomHandle.zoomOut(),
+    onPanLeft: () => zoomHandle.panLeft(),
+    onPanRight: () => zoomHandle.panRight(),
+    onReset: () => zoomHandle.reset(),
+  });
+
   return {
     svg: svgNode,
     zoomHandle,
     cursorHandle,
+    toolbarHandle,
     getState: () => viewerState,
     destroy: () => {
+      toolbarHandle.destroy();
       zoomHandle.destroy();
       cursorHandle.destroy();
     },
