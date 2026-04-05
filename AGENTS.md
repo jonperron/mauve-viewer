@@ -23,6 +23,7 @@ Coding rules are defined in `.github/instructions/` and loaded automatically by 
 - [coding-style.instructions.md](.github/instructions/coding-style.instructions.md) — File organization, immutability, error handling (applied to `**/*.ts`)
 - [testing.instructions.md](.github/instructions/testing.instructions.md) — TDD workflow, coverage targets (applied to test files)
 - [security.instructions.md](.github/instructions/security.instructions.md) — Secrets, input validation, CSRF (loaded on-demand)
+- [compare-with-legacy.instructions.md](.github/instructions/compare-with-legacy.instructions.md) - Feature comparison with legacy (applied to `**/*.ts`)
 
 
 ## Subagents

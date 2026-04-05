@@ -139,7 +139,7 @@ dist
 !.yarn/sdks
 !.yarn/versions
 
-# Mauve legacy Java application
+# Mauve legacy Java and TS applications
 mauve/
 mauve-viewer-legacy/
 
