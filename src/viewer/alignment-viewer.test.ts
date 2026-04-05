@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { renderAlignment } from './alignment-viewer.ts';
+import { renderAlignment, getGenomeLabel } from './alignment-viewer.ts';
 import type { ViewerHandle } from './alignment-viewer.ts';
 import type { XmfaAlignment } from '../xmfa/types.ts';
 
@@ -315,5 +315,79 @@ describe('renderAlignment', () => {
     expect(lcbBlocks2).toHaveLength(1);
     const yAfter = Number(lcbBlocks2[0]!.getAttribute('y'));
     expect(yAfter).not.toBe(yBefore);
+  });
+
+  it('should create an options panel', () => {
+    handle = renderAlignment(container, makeAlignment());
+    expect(handle.optionsPanelHandle).toBeDefined();
+    expect(container.querySelector('.options-panel')).not.toBeNull();
+  });
+
+  it('should toggle genome labels when genome ID option is unchecked', () => {
+    handle = renderAlignment(container, makeAlignment());
+    const labels = container.querySelectorAll('.genome-label');
+    expect(labels[0]!.textContent).toBe('genome1.fasta');
+
+    const cb = container.querySelector<HTMLInputElement>('input[name="showGenomeId"]')!;
+    cb.click();
+
+    expect(labels[0]!.textContent).toBe('genome1');
+    expect(labels[1]!.textContent).toBe('genome2');
+  });
+
+  it('should restore genome labels when genome ID option is re-checked', () => {
+    handle = renderAlignment(container, makeAlignment());
+    const cb = container.querySelector<HTMLInputElement>('input[name="showGenomeId"]')!;
+    cb.click(); // uncheck
+    cb.click(); // re-check
+
+    const labels = container.querySelectorAll('.genome-label');
+    expect(labels[0]!.textContent).toBe('genome1.fasta');
+    expect(labels[1]!.textContent).toBe('genome2.gbk');
+  });
+
+  it('should hide connecting lines when option is unchecked', () => {
+    handle = renderAlignment(container, makeAlignment());
+    expect(container.querySelectorAll('.lcb-connector').length).toBeGreaterThan(0);
+
+    const cb = container.querySelector<HTMLInputElement>('input[name="showConnectingLines"]')!;
+    cb.click();
+
+    expect(container.querySelectorAll('.lcb-connector').length).toBe(0);
+  });
+
+  it('should restore connecting lines when option is re-checked', () => {
+    handle = renderAlignment(container, makeAlignment());
+    const cb = container.querySelector<HTMLInputElement>('input[name="showConnectingLines"]')!;
+    cb.click(); // hide
+    cb.click(); // show
+
+    expect(container.querySelectorAll('.lcb-connector').length).toBeGreaterThan(0);
+  });
+
+  it('should clean up options panel on destroy', () => {
+    handle = renderAlignment(container, makeAlignment());
+    handle.destroy();
+    handle = undefined;
+    expect(container.querySelector('.options-panel')).toBeNull();
+    expect(container.querySelector('.viewer-controls-bar')).toBeNull();
+  });
+});
+
+describe('getGenomeLabel', () => {
+  it('returns full name when showGenomeId is true', () => {
+    expect(getGenomeLabel('genome1.fasta', true)).toBe('genome1.fasta');
+  });
+
+  it('strips extension when showGenomeId is false', () => {
+    expect(getGenomeLabel('genome1.fasta', false)).toBe('genome1');
+  });
+
+  it('strips last extension for multi-dot names', () => {
+    expect(getGenomeLabel('my.genome.file.gbk', false)).toBe('my.genome.file');
+  });
+
+  it('returns full name if no extension', () => {
+    expect(getGenomeLabel('genome_no_ext', false)).toBe('genome_no_ext');
   });
 });

@@ -6,9 +6,15 @@ import { getZoomedScale, getVisibleRangeSize } from './viewer-state.ts';
 import type { ViewerConfig } from './alignment-viewer.ts';
 import { Y_POS_OFFSET, LCB_HEIGHT } from './alignment-viewer.ts';
 
+/** Display options for annotation rendering */
+export interface AnnotationDisplayOptions {
+  readonly showFeatures: boolean;
+  readonly showContigs: boolean;
+}
+
 /** Handle returned by setupAnnotations for lifecycle management */
 export interface AnnotationsHandle {
-  readonly update: (state: ViewerState) => void;
+  readonly update: (state: ViewerState, displayOptions?: AnnotationDisplayOptions) => void;
   readonly destroy: () => void;
 }
 
@@ -23,6 +29,8 @@ const FEATURE_OFFSET = 5;
  * Features are shown/hidden based on zoom level (< 1 Mbp threshold).
  * Contig boundaries are always visible when present.
  */
+const DEFAULT_DISPLAY_OPTIONS: AnnotationDisplayOptions = { showFeatures: true, showContigs: true };
+
 export function setupAnnotations(
   root: d3.Selection<SVGGElement, unknown, null, undefined>,
   state: ViewerState,
@@ -33,13 +41,17 @@ export function setupAnnotations(
   onFeatureClick: (feature: GenomicFeature, event: MouseEvent) => void,
 ): AnnotationsHandle {
   let currentState = state;
+  let currentDisplayOptions = DEFAULT_DISPLAY_OPTIONS;
 
   // Create annotation groups for each genome panel
-  renderAnnotations(root, currentState, config, annotations, onFeatureHover, onFeatureLeave, onFeatureClick);
+  renderAnnotations(root, currentState, config, annotations, currentDisplayOptions, onFeatureHover, onFeatureLeave, onFeatureClick);
 
-  function update(newState: ViewerState): void {
+  function update(newState: ViewerState, displayOptions?: AnnotationDisplayOptions): void {
     currentState = newState;
-    renderAnnotations(root, currentState, config, annotations, onFeatureHover, onFeatureLeave, onFeatureClick);
+    if (displayOptions) {
+      currentDisplayOptions = displayOptions;
+    }
+    renderAnnotations(root, currentState, config, annotations, currentDisplayOptions, onFeatureHover, onFeatureLeave, onFeatureClick);
   }
 
   function destroy(): void {
@@ -55,6 +67,7 @@ function renderAnnotations(
   state: ViewerState,
   config: ViewerConfig,
   annotations: AnnotationMap,
+  displayOptions: AnnotationDisplayOptions,
   onFeatureHover: (feature: GenomicFeature, event: MouseEvent) => void,
   onFeatureLeave: () => void,
   onFeatureClick: (feature: GenomicFeature, event: MouseEvent) => void,
@@ -76,7 +89,7 @@ function renderAnnotations(
     if (panel.empty()) continue;
 
     renderGenomeAnnotations(
-      panel, state, config, dataIndex, genomeAnnotations,
+      panel, state, config, dataIndex, genomeAnnotations, displayOptions,
       onFeatureHover, onFeatureLeave, onFeatureClick,
     );
   }
@@ -88,6 +101,7 @@ function renderGenomeAnnotations(
   config: ViewerConfig,
   dataIndex: number,
   genomeAnnotations: GenomeAnnotations,
+  displayOptions: AnnotationDisplayOptions,
   onFeatureHover: (feature: GenomicFeature, event: MouseEvent) => void,
   onFeatureLeave: () => void,
   onFeatureClick: (feature: GenomicFeature, event: MouseEvent) => void,
@@ -95,11 +109,11 @@ function renderGenomeAnnotations(
   const scale = getZoomedScale(state, dataIndex);
   const visibleRange = getVisibleRangeSize(state, dataIndex);
 
-  if (genomeAnnotations.contigs.length > 0) {
+  if (displayOptions.showContigs && genomeAnnotations.contigs.length > 0) {
     renderContigBoundaries(panel, genomeAnnotations.contigs, scale, config.panelHeight);
   }
 
-  if (visibleRange < FEATURE_ZOOM_THRESHOLD) {
+  if (displayOptions.showFeatures && visibleRange < FEATURE_ZOOM_THRESHOLD) {
     const domain = scale.domain();
     const domainStart = domain[0] ?? 0;
     const domainEnd = domain[1] ?? 0;
