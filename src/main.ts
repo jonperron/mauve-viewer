@@ -1,5 +1,8 @@
 import { parseXmfa } from './xmfa/index.ts';
 import { renderAlignment } from './viewer/alignment-viewer.ts';
+import type { ViewerHandle } from './viewer/alignment-viewer.ts';
+
+let currentHandle: ViewerHandle | undefined;
 
 function setupDropZone(): void {
   const dropZone = document.getElementById('dropZone');
@@ -52,7 +55,8 @@ function loadFile(file: File, viewer: HTMLElement): void {
 
     try {
       const alignment = parseXmfa(content);
-      renderAlignment(viewer, alignment);
+      currentHandle?.destroy();
+      currentHandle = renderAlignment(viewer, alignment);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       viewer.textContent = `Error parsing XMFA file: ${message}`;
