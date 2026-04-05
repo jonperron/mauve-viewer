@@ -1,5 +1,19 @@
 import * as d3 from 'd3';
 import type { XmfaAlignment, Lcb } from '../xmfa/types.ts';
+import {
+  createViewerState,
+  applyZoomTransform,
+  getZoomedScale,
+  findHomologousPositions,
+  positionToPixel,
+} from './viewer-state.ts';
+import type { ViewerState } from './viewer-state.ts';
+import { setupZoom } from './zoom.ts';
+import type { ZoomHandle } from './zoom.ts';
+import { setupCursor } from './cursor.ts';
+import type { CursorHandle } from './cursor.ts';
+import { createNavigationToolbar } from './navigation-toolbar.ts';
+import type { NavigationToolbarHandle } from './navigation-toolbar.ts';
 
 export interface ViewerConfig {
   readonly width: number;
@@ -27,11 +41,21 @@ function assignLcbColors(lcbs: readonly Lcb[]): readonly string[] {
   });
 }
 
+/** Active viewer handle for cleanup and interaction */
+export interface ViewerHandle {
+  readonly svg: SVGSVGElement;
+  readonly zoomHandle: ZoomHandle;
+  readonly cursorHandle: CursorHandle;
+  readonly toolbarHandle: NavigationToolbarHandle;
+  readonly getState: () => ViewerState;
+  readonly destroy: () => void;
+}
+
 export function renderAlignment(
   container: HTMLElement,
   alignment: XmfaAlignment,
   config: ViewerConfig = DEFAULT_CONFIG,
-): SVGSVGElement {
+): ViewerHandle {
   const { genomes, lcbs } = alignment;
   const { width, panelHeight, panelGap, margin } = config;
   const innerWidth = width - margin.left - margin.right;
@@ -43,6 +67,7 @@ export function renderAlignment(
 
   const colors = assignLcbColors(lcbs);
 
+  // Clean up previous viewer
   d3.select(container).select('svg').remove();
 
   const svg = d3
@@ -54,6 +79,7 @@ export function renderAlignment(
 
   const root = svg
     .append('g')
+    .attr('class', 'alignment-root')
     .attr('transform', `translate(${margin.left},${margin.top})`);
 
   for (let gi = 0; gi < genomes.length; gi++) {
@@ -64,7 +90,41 @@ export function renderAlignment(
 
   renderConnectingLines(root, genomes, lcbs, colors, config);
 
-  return svg.node()!;
+  const svgNode = svg.node()!;
+
+  // Mutable state — held in closure for D3 callbacks (intentional exception to immutability rule)
+  let viewerState = createViewerState(alignment, config);
+
+  const zoomHandle = setupZoom(svgNode, viewerState, (transform) => {
+    viewerState = applyZoomTransform(viewerState, transform);
+    updatePanelsOnZoom(root, viewerState, genomes, lcbs, colors, config);
+    cursorHandle.update(viewerState);
+  });
+
+  const cursorHandle = setupCursor(svgNode, viewerState, config, (sourceGenomeIndex, position) => {
+    alignOnPosition(svgNode, zoomHandle, viewerState, config, sourceGenomeIndex, position);
+  });
+
+  const toolbarHandle = createNavigationToolbar(container, {
+    onZoomIn: () => zoomHandle.zoomIn(),
+    onZoomOut: () => zoomHandle.zoomOut(),
+    onPanLeft: () => zoomHandle.panLeft(),
+    onPanRight: () => zoomHandle.panRight(),
+    onReset: () => zoomHandle.reset(),
+  });
+
+  return {
+    svg: svgNode,
+    zoomHandle,
+    cursorHandle,
+    toolbarHandle,
+    getState: () => viewerState,
+    destroy: () => {
+      toolbarHandle.destroy();
+      zoomHandle.destroy();
+      cursorHandle.destroy();
+    },
+  };
 }
 
 function renderGenomePanel(
@@ -145,6 +205,8 @@ function renderLcbBlocks(
     panel
       .append('rect')
       .attr('class', 'lcb-block')
+      .attr('data-lcb-index', String(li))
+      .attr('data-genome-index', String(genomeIndex))
       .attr('x', x)
       .attr('y', y)
       .attr('width', Math.max(blockWidth, 2))
@@ -220,6 +282,8 @@ function renderConnectingLines(
       root
         .append('path')
         .attr('class', 'lcb-connector')
+        .attr('data-lcb-index', String(li))
+        .attr('data-genome-top', String(gi))
         .attr('d', path)
         .attr('fill', colors[li]!)
         .attr('fill-opacity', 0.2)
@@ -227,4 +291,118 @@ function renderConnectingLines(
         .attr('stroke-width', 0.5);
     }
   }
+}
+
+/**
+ * Update all panels when the zoom transform changes.
+ * Rescales LCB blocks, rulers, and connecting lines.
+ */
+function updatePanelsOnZoom(
+  root: d3.Selection<SVGGElement, unknown, null, undefined>,
+  state: ViewerState,
+  genomes: readonly { readonly name: string; readonly length: number }[],
+  lcbs: readonly Lcb[],
+  colors: readonly string[],
+  config: ViewerConfig,
+): void {
+  for (let gi = 0; gi < genomes.length; gi++) {
+    const scale = getZoomedScale(state, gi);
+    const tickCount = Math.min(10, Math.floor(state.innerWidth / 80));
+    const axis = d3.axisBottom(scale).ticks(tickCount).tickFormat(d3.format('~s'));
+
+    // Update ruler
+    root.select(`.genome-panel:nth-child(${gi + 1}) .ruler`).call(axis as never);
+
+    // Update LCB blocks for this genome
+    root
+      .selectAll(`.lcb-block[data-genome-index="${gi}"]`)
+      .each(function () {
+        const el = d3.select(this);
+        const li = Number(el.attr('data-lcb-index'));
+        const lcb = lcbs[li];
+        if (!lcb) return;
+
+        const left = lcb.left[gi];
+        const right = lcb.right[gi];
+        if (!left || !right) return;
+
+        el.attr('x', scale(left)).attr('width', Math.max(scale(right) - scale(left), 2));
+      });
+  }
+
+  // Update connecting lines
+  updateConnectingLinesOnZoom(root, state, lcbs, config);
+}
+
+/** Update connecting line trapezoids when zoom changes */
+function updateConnectingLinesOnZoom(
+  root: d3.Selection<SVGGElement, unknown, null, undefined>,
+  state: ViewerState,
+  lcbs: readonly Lcb[],
+  config: ViewerConfig,
+): void {
+  const { panelHeight, panelGap } = config;
+
+  root.selectAll('.lcb-connector').each(function () {
+    const el = d3.select(this);
+    const li = Number(el.attr('data-lcb-index'));
+    const gi = Number(el.attr('data-genome-top'));
+    const lcb = lcbs[li];
+    if (!lcb) return;
+
+    const topLeft = lcb.left[gi];
+    const topRight = lcb.right[gi];
+    const bottomLeft = lcb.left[gi + 1];
+    const bottomRight = lcb.right[gi + 1];
+
+    if (!topLeft || !topRight || !bottomLeft || !bottomRight) return;
+
+    const topScale = getZoomedScale(state, gi);
+    const bottomScale = getZoomedScale(state, gi + 1);
+    const topY = gi * (panelHeight + panelGap) + panelHeight;
+    const bottomY = (gi + 1) * (panelHeight + panelGap);
+
+    const tl = topScale(topLeft);
+    const tr = topScale(topRight);
+    const bl = bottomScale(bottomLeft);
+    const br = bottomScale(bottomRight);
+
+    el.attr('d', `M${tl},${topY} L${bl},${bottomY} L${br},${bottomY} L${tr},${topY} Z`);
+  });
+}
+
+/**
+ * Click-to-align: center all genome panels on the homologous position.
+ * Calculates the position relative to the center of the view and pans.
+ */
+function alignOnPosition(
+  svg: SVGSVGElement,
+  zoomHandle: ZoomHandle,
+  state: ViewerState,
+  config: ViewerConfig,
+  sourceGenomeIndex: number,
+  position: number,
+): void {
+  const homologous = findHomologousPositions(
+    state.alignment,
+    sourceGenomeIndex,
+    position,
+  );
+
+  if (homologous.length === 0) return;
+
+  // Find the source position in pixels and center the view on it
+  const sourcePixel = positionToPixel(state, sourceGenomeIndex, position);
+  const centerX = state.innerWidth / 2;
+  const offset = centerX - sourcePixel;
+
+  const currentTransform = d3.zoomTransform(svg);
+  const newTransform = d3.zoomIdentity
+    .translate(currentTransform.x + offset, 0)
+    .scale(currentTransform.k);
+
+  d3.select<SVGSVGElement, unknown>(svg)
+    .transition()
+    .duration(300)
+    .call(zoomHandle.zoomBehavior.transform, newTransform);
 }

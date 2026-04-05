@@ -36,6 +36,37 @@
     #viewer { margin-top: 1rem; }
     .genome-label { font-size: 12px; font-weight: 600; }
     .ruler text { font-size: 10px; }
+    .navigation-toolbar {
+      display: flex;
+      gap: 4px;
+      padding: 6px 8px;
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: fit-content;
+      margin-bottom: 8px;
+    }
+    .navigation-toolbar button {
+      width: 32px;
+      height: 32px;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .navigation-toolbar button:hover {
+      background: #e0e0e0;
+      border-color: #999;
+    }
+    .navigation-toolbar button:active {
+      background: #d0d0d0;
+    }
   </style>
 </head>
 <body>

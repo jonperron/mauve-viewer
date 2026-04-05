@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderAlignment } from './alignment-viewer.ts';
+import type { ViewerHandle } from './alignment-viewer.ts';
 import type { XmfaAlignment } from '../xmfa/types.ts';
 
 function makeAlignment(overrides?: Partial<XmfaAlignment>): XmfaAlignment {
@@ -40,17 +41,23 @@ function makeAlignment(overrides?: Partial<XmfaAlignment>): XmfaAlignment {
 
 describe('renderAlignment', () => {
   let container: HTMLDivElement;
+  let handle: ViewerHandle | undefined;
 
   beforeEach(() => {
     container = document.createElement('div');
     document.body.appendChild(container);
   });
 
+  afterEach(() => {
+    handle?.destroy();
+    handle = undefined;
+  });
+
   it('should create an SVG element', () => {
     const alignment = makeAlignment();
-    const svg = renderAlignment(container, alignment);
-    expect(svg).toBeInstanceOf(SVGSVGElement);
-    expect(container.querySelector('svg')).toBe(svg);
+    handle = renderAlignment(container, alignment);
+    expect(handle.svg).toBeInstanceOf(SVGSVGElement);
+    expect(container.querySelector('svg')).toBe(handle.svg);
   });
 
   it('should create a panel for each genome', () => {
@@ -95,8 +102,9 @@ describe('renderAlignment', () => {
 
   it('should replace SVG on re-render', () => {
     const alignment = makeAlignment();
-    renderAlignment(container, alignment);
-    renderAlignment(container, alignment);
+    handle = renderAlignment(container, alignment);
+    handle.destroy();
+    handle = renderAlignment(container, alignment);
     const svgs = container.querySelectorAll('svg');
     expect(svgs).toHaveLength(1);
   });
@@ -148,12 +156,27 @@ describe('renderAlignment', () => {
 
   it('should accept custom config', () => {
     const alignment = makeAlignment();
-    const svg = renderAlignment(container, alignment, {
+    handle = renderAlignment(container, alignment, {
       width: 1200,
       panelHeight: 150,
       panelGap: 50,
       margin: { top: 30, right: 30, bottom: 30, left: 150 },
     });
-    expect(svg.getAttribute('width')).toBe('1200');
+    expect(handle.svg.getAttribute('width')).toBe('1200');
+  });
+
+  it('should return a handle with destroy method', () => {
+    handle = renderAlignment(container, makeAlignment());
+    expect(handle.destroy).toBeInstanceOf(Function);
+    expect(handle.zoomHandle).toBeDefined();
+    expect(handle.cursorHandle).toBeDefined();
+    expect(handle.getState).toBeInstanceOf(Function);
+  });
+
+  it('should provide current state via getState', () => {
+    handle = renderAlignment(container, makeAlignment());
+    const state = handle.getState();
+    expect(state.alignment).toBeDefined();
+    expect(state.zoomTransform.k).toBe(1);
   });
 });
