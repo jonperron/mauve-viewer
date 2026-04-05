@@ -6,6 +6,8 @@ import {
   positionToPixel,
   findLcbAtPosition,
   findHomologousPositions,
+  getVisibleGenomeOrder,
+  computePanelY,
 } from './viewer-state.ts';
 
 /** Cursor info displayed on hover */
@@ -27,6 +29,7 @@ export type AlignClickCallback = (
 export interface CursorHandle {
   readonly destroy: () => void;
   readonly update: (state: ViewerState) => void;
+  readonly rebuildOverlays: (state: ViewerState) => void;
 }
 
 /**
@@ -53,22 +56,8 @@ export function setupCursor(
     .attr('transform', `translate(${config.margin.left},${config.margin.top})`)
     .style('pointer-events', 'none');
 
-  // Create cursor lines for each genome panel
-  const cursorLines: d3.Selection<SVGLineElement, unknown, null, undefined>[] = [];
-  for (let gi = 0; gi < genomeCount; gi++) {
-    const panelY = gi * (config.panelHeight + config.panelGap);
-    const line = cursorGroup
-      .append('line')
-      .attr('class', `cursor-line cursor-line-${gi}`)
-      .attr('y1', panelY)
-      .attr('y2', panelY + config.panelHeight)
-      .attr('x1', -10)
-      .attr('x2', -10)
-      .attr('stroke', '#222')
-      .attr('stroke-width', 1.5)
-      .attr('opacity', 0);
-    cursorLines.push(line);
-  }
+  // Cursor lines keyed by data index
+  let cursorLines = new Map<number, d3.Selection<SVGLineElement, unknown, null, undefined>>();
 
   // Create info display element
   const infoGroup = svgSelection
@@ -96,45 +85,70 @@ export function setupCursor(
     .attr('class', 'cursor-overlay-group')
     .attr('transform', `translate(${config.margin.left},${config.margin.top})`);
 
-  for (let gi = 0; gi < genomeCount; gi++) {
-    const panelY = gi * (config.panelHeight + config.panelGap);
+  function buildCursorElements(): void {
+    cursorGroup.selectAll('*').remove();
+    overlayGroup.selectAll('*').remove();
+    cursorLines = new Map();
 
-    overlayGroup
-      .append('rect')
-      .attr('class', `panel-overlay panel-overlay-${gi}`)
-      .attr('x', 0)
-      .attr('y', panelY)
-      .attr('width', currentState.innerWidth)
-      .attr('height', config.panelHeight)
-      .attr('fill', 'transparent')
-      .style('cursor', 'crosshair')
-      .on('mousemove', (event: MouseEvent) => {
-        handleMouseMove(gi, event);
-      })
-      .on('mouseout', () => {
-        handleMouseOut();
-      })
-      .on('click', (event: MouseEvent) => {
-        handleClick(gi, event);
-      });
+    const visibleOrder = getVisibleGenomeOrder(currentState);
+
+    for (const dataIndex of visibleOrder) {
+      const displayIndex = currentState.genomeOrder.indexOf(dataIndex);
+      const panelY = computePanelY(currentState, config, displayIndex);
+
+      const line = cursorGroup
+        .append('line')
+        .attr('class', `cursor-line cursor-line-${dataIndex}`)
+        .attr('y1', panelY)
+        .attr('y2', panelY + config.panelHeight)
+        .attr('x1', -10)
+        .attr('x2', -10)
+        .attr('stroke', '#222')
+        .attr('stroke-width', 1.5)
+        .attr('opacity', 0);
+      cursorLines.set(dataIndex, line);
+
+      overlayGroup
+        .append('rect')
+        .attr('class', `panel-overlay panel-overlay-${dataIndex}`)
+        .attr('x', 0)
+        .attr('y', panelY)
+        .attr('width', currentState.innerWidth)
+        .attr('height', config.panelHeight)
+        .attr('fill', 'transparent')
+        .style('cursor', 'crosshair')
+        .on('mousemove', (event: MouseEvent) => {
+          handleMouseMove(dataIndex, event);
+        })
+        .on('mouseout', () => {
+          handleMouseOut();
+        })
+        .on('click', (event: MouseEvent) => {
+          handleClick(dataIndex, event);
+        });
+    }
   }
 
-  function handleMouseMove(genomeIndex: number, event: MouseEvent): void {
+  // Build initial cursor elements
+  buildCursorElements();
+
+  function handleMouseMove(genomeDataIndex: number, event: MouseEvent): void {
     const [mouseX] = d3.pointer(event, overlayGroup.node());
-    const position = pixelToPosition(currentState, genomeIndex, mouseX);
+    const position = pixelToPosition(currentState, genomeDataIndex, mouseX);
 
     // Show cursor line on hovered panel
-    showCursorAt(genomeIndex, mouseX);
+    showCursorAt(genomeDataIndex, mouseX);
 
     // Find and show homologous positions
     const homologous = findHomologousPositions(
       currentState.alignment,
-      genomeIndex,
+      genomeDataIndex,
       position,
     );
 
     for (let gi = 0; gi < genomeCount; gi++) {
-      if (gi === genomeIndex) continue;
+      if (gi === genomeDataIndex) continue;
+      if (currentState.hiddenGenomes.has(gi)) continue;
 
       const match = homologous.find((h) => h.genomeIndex === gi);
       if (match) {
@@ -146,44 +160,44 @@ export function setupCursor(
     }
 
     // Highlight LCBs
-    highlightLcbs(genomeIndex, position);
+    highlightLcbs(genomeDataIndex, position);
 
     // Update info display
-    updateInfo(genomeIndex, position);
+    updateInfo(genomeDataIndex, position);
   }
 
   function handleMouseOut(): void {
-    for (let gi = 0; gi < genomeCount; gi++) {
-      hideCursor(gi);
+    for (const dataIndex of cursorLines.keys()) {
+      hideCursor(dataIndex);
     }
     clearHighlight();
     infoGroup.attr('opacity', 0);
   }
 
-  function handleClick(genomeIndex: number, event: MouseEvent): void {
+  function handleClick(genomeDataIndex: number, event: MouseEvent): void {
     const [mouseX] = d3.pointer(event, overlayGroup.node());
-    const position = pixelToPosition(currentState, genomeIndex, mouseX);
-    onAlignClick(genomeIndex, position);
+    const position = pixelToPosition(currentState, genomeDataIndex, mouseX);
+    onAlignClick(genomeDataIndex, position);
   }
 
-  function showCursorAt(genomeIndex: number, pixelX: number): void {
-    const line = cursorLines[genomeIndex];
+  function showCursorAt(genomeDataIndex: number, pixelX: number): void {
+    const line = cursorLines.get(genomeDataIndex);
     if (!line) return;
     line.attr('x1', pixelX).attr('x2', pixelX).attr('opacity', 1);
   }
 
-  function hideCursor(genomeIndex: number): void {
-    const line = cursorLines[genomeIndex];
+  function hideCursor(genomeDataIndex: number): void {
+    const line = cursorLines.get(genomeDataIndex);
     if (!line) return;
     line.attr('opacity', 0);
   }
 
-  function highlightLcbs(genomeIndex: number, position: number): void {
+  function highlightLcbs(genomeDataIndex: number, position: number): void {
     clearHighlight();
 
     const result = findLcbAtPosition(
       currentState.alignment,
-      genomeIndex,
+      genomeDataIndex,
       position,
     );
     if (!result) return;
@@ -222,18 +236,18 @@ export function setupCursor(
       .attr('stroke-width', 0.5);
   }
 
-  function updateInfo(genomeIndex: number, position: number): void {
-    const genome = currentState.alignment.genomes[genomeIndex];
+  function updateInfo(genomeDataIndex: number, position: number): void {
+    const genome = currentState.alignment.genomes[genomeDataIndex];
     if (!genome) return;
 
     const lcbResult = findLcbAtPosition(
       currentState.alignment,
-      genomeIndex,
+      genomeDataIndex,
       position,
     );
 
     const lcbLabel = lcbResult
-      ? `LCB ${lcbResult.lcbIndex + 1} [${lcbResult.lcb.left[genomeIndex]}-${lcbResult.lcb.right[genomeIndex]}]`
+      ? `LCB ${lcbResult.lcbIndex + 1} [${lcbResult.lcb.left[genomeDataIndex]}-${lcbResult.lcb.right[genomeDataIndex]}]`
       : 'No LCB';
 
     const text = `${genome.name} | pos: ${position.toLocaleString()} | ${lcbLabel}`;
@@ -262,11 +276,16 @@ export function setupCursor(
     currentState = newState;
   }
 
+  function rebuildOverlays(newState: ViewerState): void {
+    currentState = newState;
+    buildCursorElements();
+  }
+
   function destroy(): void {
     cursorGroup.remove();
     infoGroup.remove();
     overlayGroup.remove();
   }
 
-  return { destroy, update };
+  return { destroy, update, rebuildOverlays };
 }

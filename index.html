@@ -67,6 +67,36 @@
     .navigation-toolbar button:active {
       background: #d0d0d0;
     }
+    .track-controls {
+      width: 30px;
+    }
+    .track-control-group button {
+      width: 24px;
+      height: 22px;
+      border: 1px solid #bbb;
+      border-radius: 3px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 11px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.15s;
+    }
+    .track-control-group button:hover {
+      background: #e0e0e0;
+    }
+    .track-control-group button:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+    .track-control-group button.active {
+      background: #4a90d9;
+      color: #fff;
+      border-color: #3a7bc8;
+    }
   </style>
 </head>
 <body>

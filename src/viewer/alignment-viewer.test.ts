@@ -179,4 +179,147 @@ describe('renderAlignment', () => {
     expect(state.alignment).toBeDefined();
     expect(state.zoomTransform.k).toBe(1);
   });
+
+  it('should return a trackControlsHandle', () => {
+    handle = renderAlignment(container, makeAlignment());
+    expect(handle.trackControlsHandle).toBeDefined();
+    expect(handle.trackControlsHandle.element).toBeInstanceOf(HTMLElement);
+  });
+
+  it('should create track controls with buttons for each genome', () => {
+    handle = renderAlignment(container, makeAlignment());
+    const groups = container.querySelectorAll('.track-control-group');
+    expect(groups).toHaveLength(2);
+  });
+
+  it('should initialize genome order as sequential', () => {
+    handle = renderAlignment(container, makeAlignment());
+    const state = handle.getState();
+    expect(state.genomeOrder).toEqual([0, 1]);
+  });
+
+  it('should initialize reference genome to 0', () => {
+    handle = renderAlignment(container, makeAlignment());
+    const state = handle.getState();
+    expect(state.referenceGenomeIndex).toBe(0);
+  });
+
+  it('should have no hidden genomes initially', () => {
+    handle = renderAlignment(container, makeAlignment());
+    const state = handle.getState();
+    expect(state.hiddenGenomes.size).toBe(0);
+  });
+
+  it('should reorder genomes when move-down button clicked', () => {
+    handle = renderAlignment(container, makeAlignment());
+    const downBtn = container.querySelector('.track-control-group:nth-child(1) .track-move-down') as HTMLButtonElement;
+    downBtn.click();
+    const state = handle.getState();
+    expect(state.genomeOrder).toEqual([1, 0]);
+
+    // Labels should now be in reverse order
+    const labels = container.querySelectorAll('.genome-label');
+    expect(labels[0]!.textContent).toBe('genome2.gbk');
+    expect(labels[1]!.textContent).toBe('genome1.fasta');
+  });
+
+  it('should change reference genome when R button clicked', () => {
+    handle = renderAlignment(container, makeAlignment());
+    const refBtn = container.querySelector('.track-control-group:nth-child(2) .track-set-ref') as HTMLButtonElement;
+    refBtn.click();
+    const state = handle.getState();
+    expect(state.referenceGenomeIndex).toBe(1);
+  });
+
+  it('should hide a genome when hide button clicked', () => {
+    handle = renderAlignment(container, makeAlignment());
+    const hideBtn = container.querySelector('.track-control-group:nth-child(2) .track-toggle-visibility') as HTMLButtonElement;
+    hideBtn.click();
+    const state = handle.getState();
+    expect(state.hiddenGenomes.has(1)).toBe(true);
+
+    // Hidden genome should render as collapsed
+    const hiddenPanels = container.querySelectorAll('.genome-panel-hidden');
+    expect(hiddenPanels).toHaveLength(1);
+  });
+
+  it('should show a hidden genome when show button clicked', () => {
+    handle = renderAlignment(container, makeAlignment());
+    // Hide genome
+    const hideBtn = container.querySelector('.track-control-group:nth-child(2) .track-toggle-visibility') as HTMLButtonElement;
+    hideBtn.click();
+    expect(handle.getState().hiddenGenomes.has(1)).toBe(true);
+    // Show genome — the track controls are rebuilt, so we need to re-query
+    const showBtn = container.querySelector('.track-control-group:nth-child(2) .track-toggle-visibility') as HTMLButtonElement;
+    showBtn.click();
+    expect(handle.getState().hiddenGenomes.has(1)).toBe(false);
+    const hiddenPanels = container.querySelectorAll('.genome-panel-hidden');
+    expect(hiddenPanels).toHaveLength(0);
+  });
+
+  it('should render hidden genome with collapsed bar', () => {
+    handle = renderAlignment(container, makeAlignment());
+    const hideBtn = container.querySelector('.track-control-group:nth-child(1) .track-toggle-visibility') as HTMLButtonElement;
+    hideBtn.click();
+    // The first genome should be hidden
+    const hiddenBg = container.querySelector('.genome-background-hidden');
+    expect(hiddenBg).toBeTruthy();
+    expect(hiddenBg?.getAttribute('height')).toBe('20');
+  });
+
+  it('should not render connecting lines involving hidden genomes', () => {
+    handle = renderAlignment(container, makeAlignment());
+    // Initially 2 connectors (2 LCBs between 2 genomes — wait, check again)
+    let connectors = container.querySelectorAll('.lcb-connector');
+    expect(connectors.length).toBeGreaterThan(0);
+    // Hide one genome
+    const hideBtn = container.querySelector('.track-control-group:nth-child(2) .track-toggle-visibility') as HTMLButtonElement;
+    hideBtn.click();
+    connectors = container.querySelectorAll('.lcb-connector');
+    // With only 1 visible genome, no connecting lines
+    expect(connectors).toHaveLength(0);
+  });
+
+  it('should update reference genome R button style after setting reference', () => {
+    handle = renderAlignment(container, makeAlignment());
+    // Initially, first R button is active
+    let refBtns = container.querySelectorAll('.track-set-ref');
+    expect((refBtns[0] as HTMLButtonElement).classList.contains('active')).toBe(true);
+    expect((refBtns[1] as HTMLButtonElement).classList.contains('active')).toBe(false);
+
+    // Set second genome as reference
+    (refBtns[1] as HTMLButtonElement).click();
+    refBtns = container.querySelectorAll('.track-set-ref');
+    expect((refBtns[0] as HTMLButtonElement).classList.contains('active')).toBe(false);
+    expect((refBtns[1] as HTMLButtonElement).classList.contains('active')).toBe(true);
+  });
+
+  it('should clean up track controls on destroy', () => {
+    handle = renderAlignment(container, makeAlignment());
+    expect(container.querySelector('.track-controls')).toBeTruthy();
+    handle.destroy();
+    handle = undefined;
+    expect(container.querySelector('.track-controls')).toBeNull();
+  });
+
+  it('should flip LCB visual orientation when reference changes', () => {
+    // LCB 1 has genome2 as reverse. When genome2 becomes reference, it should flip.
+    const alignment = makeAlignment();
+    handle = renderAlignment(container, alignment);
+
+    // Before: genome2's LCB 1 is reverse (below centerline)
+    const lcbBlocks1 = container.querySelectorAll('.lcb-block[data-genome-index="1"][data-lcb-index="1"]');
+    expect(lcbBlocks1).toHaveLength(1);
+    const yBefore = Number(lcbBlocks1[0]!.getAttribute('y'));
+
+    // Set genome2 (data index 1) as reference
+    const refBtn = container.querySelector('.track-control-group:nth-child(2) .track-set-ref') as HTMLButtonElement;
+    refBtn.click();
+
+    // After: genome2's LCB 1 should now be forward (above centerline)
+    const lcbBlocks2 = container.querySelectorAll('.lcb-block[data-genome-index="1"][data-lcb-index="1"]');
+    expect(lcbBlocks2).toHaveLength(1);
+    const yAfter = Number(lcbBlocks2[0]!.getAttribute('y'));
+    expect(yAfter).not.toBe(yBefore);
+  });
 });
