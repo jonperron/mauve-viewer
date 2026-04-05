@@ -158,8 +158,8 @@
 <body>
   <h1>Mauve Genome Alignment Viewer</h1>
   <div class="drop-zone" id="dropZone">
-    <p>Drop an XMFA alignment file here, or click to select</p>
-    <input type="file" id="fileInput" accept=".xmfa,.alignment" hidden />
+    <p>Drop an alignment file here, or click to select (XMFA, JSON, GenBank)</p>
+    <input type="file" id="fileInput" accept=".xmfa,.alignment,.json,.gbk,.gb,.genbank" multiple hidden />
   </div>
   <div id="viewer"></div>
   <script type="module" src="/src/main.ts"></script>
