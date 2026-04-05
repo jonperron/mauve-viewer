@@ -1,8 +1,13 @@
 import { parseXmfa } from './xmfa/index.ts';
 import { renderAlignment } from './viewer/alignment-viewer.ts';
 import type { ViewerHandle } from './viewer/alignment-viewer.ts';
+import { parseGenBankMulti } from './annotations/index.ts';
+import type { GenomeAnnotations } from './annotations/index.ts';
+import type { AnnotationMap } from './viewer/annotations.ts';
 
 let currentHandle: ViewerHandle | undefined;
+// Mutable state for loaded annotations (intentional exception to immutability rule)
+let loadedAnnotations: AnnotationMap = new Map();
 
 function setupDropZone(): void {
   const dropZone = document.getElementById('dropZone');
@@ -55,8 +60,12 @@ function loadFile(file: File, viewer: HTMLElement): void {
 
     try {
       const alignment = parseXmfa(content);
+
+      // Auto-load annotations from XMFA header annotation references
+      const annotationMap = buildAnnotationMap(alignment, loadedAnnotations);
+
       currentHandle?.destroy();
-      currentHandle = renderAlignment(viewer, alignment);
+      currentHandle = renderAlignment(viewer, alignment, undefined, annotationMap);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       viewer.textContent = `Error parsing XMFA file: ${message}`;
@@ -66,3 +75,29 @@ function loadFile(file: File, viewer: HTMLElement): void {
 }
 
 setupDropZone();
+
+function buildAnnotationMap(
+  _alignment: { readonly genomes: readonly { readonly index: number }[] },
+  annotations: AnnotationMap,
+): AnnotationMap {
+  return annotations;
+}
+
+/** Load a GenBank annotation file for a specific genome index */
+export function loadAnnotationFile(
+  content: string,
+  genomeIndex: number,
+): GenomeAnnotations {
+  const parsed = parseGenBankMulti(content);
+  const merged: GenomeAnnotations = {
+    genomeIndex,
+    features: parsed.flatMap((p) => p.features),
+    contigs: parsed.flatMap((p) => p.contigs),
+  };
+
+  const newMap = new Map(loadedAnnotations);
+  newMap.set(genomeIndex, merged);
+  loadedAnnotations = newMap;
+
+  return merged;
+}

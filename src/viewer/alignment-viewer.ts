@@ -25,6 +25,10 @@ import { createNavigationToolbar } from './navigation-toolbar.ts';
 import type { NavigationToolbarHandle } from './navigation-toolbar.ts';
 import { createTrackControls } from './track-controls.ts';
 import type { TrackControlsHandle, TrackControlLayout } from './track-controls.ts';
+import { setupAnnotations } from './annotations.ts';
+import type { AnnotationsHandle, AnnotationMap } from './annotations.ts';
+import { createFeatureTooltip } from './feature-tooltip.ts';
+import type { FeatureTooltipHandle } from './feature-tooltip.ts';
 
 export interface ViewerConfig {
   readonly width: number;
@@ -38,18 +42,27 @@ export interface ViewerConfig {
   };
 }
 
+/** Legacy layout constants matching the original JavaScript Mauve viewer */
+export const Y_POS_OFFSET = 30;
+export const LCB_HEIGHT = 22;
+
+/** D3 schemeCategory20 color palette used by legacy viewer */
+const SCHEME_CATEGORY_20: readonly string[] = [
+  '#1f77b4', '#aec7e8', '#ff7f0e', '#ffbb78', '#2ca02c',
+  '#98df8a', '#d62728', '#ff9896', '#9467bd', '#c5b0d5',
+  '#8c564b', '#c49c94', '#e377c2', '#f7b6d2', '#7f7f7f',
+  '#c7c7c7', '#bcbd22', '#dbdb8d', '#17becf', '#9edae5',
+];
+
 const DEFAULT_CONFIG: ViewerConfig = {
-  width: 960,
-  panelHeight: 120,
-  panelGap: 40,
+  width: 1000,
+  panelHeight: Y_POS_OFFSET + 2 * LCB_HEIGHT,
+  panelGap: 140 - (Y_POS_OFFSET + 2 * LCB_HEIGHT),
   margin: { top: 20, right: 20, bottom: 20, left: 120 },
 };
 
 function assignLcbColors(lcbs: readonly Lcb[]): readonly string[] {
-  return lcbs.map((_, i) => {
-    const hue = (i * 60 + (i % 6) * 30) % 360;
-    return d3.hsl(hue, 0.7, 0.5).formatHex();
-  });
+  return lcbs.map((_, i) => SCHEME_CATEGORY_20[i % SCHEME_CATEGORY_20.length]!);
 }
 
 /** Active viewer handle for cleanup and interaction */
@@ -59,6 +72,7 @@ export interface ViewerHandle {
   readonly cursorHandle: CursorHandle;
   readonly toolbarHandle: NavigationToolbarHandle;
   readonly trackControlsHandle: TrackControlsHandle;
+  readonly annotationsHandle: AnnotationsHandle | undefined;
   readonly getState: () => ViewerState;
   readonly destroy: () => void;
 }
@@ -84,6 +98,7 @@ export function renderAlignment(
   container: HTMLElement,
   alignment: XmfaAlignment,
   config: ViewerConfig = DEFAULT_CONFIG,
+  annotations?: AnnotationMap,
 ): ViewerHandle {
   const { lcbs } = alignment;
   const { width, margin } = config;
@@ -121,9 +136,29 @@ export function renderAlignment(
 
   const svgNode = svg.node()!;
 
+  // Feature tooltip (shared across all panels)
+  const tooltipHandle: FeatureTooltipHandle | undefined = annotations?.size
+    ? createFeatureTooltip()
+    : undefined;
+
+  // Annotations
+  let annotationsHandle: AnnotationsHandle | undefined;
+  if (annotations?.size) {
+    annotationsHandle = setupAnnotations(
+      root,
+      viewerState,
+      config,
+      annotations,
+      (feature, event) => tooltipHandle?.show(feature, event),
+      () => tooltipHandle?.hide(),
+      (feature, event) => tooltipHandle?.showDetails(feature, event),
+    );
+  }
+
   const zoomHandle = setupZoom(svgNode, viewerState, (transform) => {
     viewerState = applyZoomTransform(viewerState, transform);
     updatePanelsOnZoom(root, viewerState, lcbs, colors, config);
+    annotationsHandle?.update(viewerState);
     cursorHandle.update(viewerState);
   });
 
@@ -158,6 +193,7 @@ export function renderAlignment(
     svg.attr('height', newHeight).attr('viewBox', `0 0 ${width} ${newHeight}`);
     renderAllPanels(root, viewerState, lcbs, colors, config);
     renderConnectingLines(root, viewerState, lcbs, colors, config);
+    annotationsHandle?.update(viewerState);
     cursorHandle.rebuildOverlays(viewerState);
   }
 
@@ -233,8 +269,11 @@ export function renderAlignment(
     cursorHandle,
     toolbarHandle,
     trackControlsHandle,
+    annotationsHandle,
     getState: () => viewerState,
     destroy: () => {
+      annotationsHandle?.destroy();
+      tooltipHandle?.destroy();
       trackControlsHandle.destroy();
       toolbarHandle.destroy();
       zoomHandle.destroy();
@@ -277,14 +316,14 @@ function renderGenomePanel(
   genomeDataIndex: number,
   lcbs: readonly Lcb[],
   colors: readonly string[],
-  panelHeight: number,
+  _panelHeight: number,
   innerWidth: number,
   referenceGenomeIndex: number,
 ): void {
   const xScale = d3
     .scaleLinear()
-    .domain([1, genome.length])
-    .range([0, innerWidth]);
+    .domain([0, genome.length])
+    .range([1, innerWidth + 1]);
 
   const panel = root
     .append('g')
@@ -294,36 +333,18 @@ function renderGenomePanel(
 
   panel
     .append('text')
-    .attr('x', -10)
-    .attr('y', panelHeight / 2)
-    .attr('text-anchor', 'end')
-    .attr('dominant-baseline', 'middle')
+    .attr('x', 0)
+    .attr('y', -3)
     .attr('class', 'genome-label')
+    .attr('font-family', 'sans-serif')
+    .attr('font-size', '10px')
+    .attr('fill', '#888')
     .text(genome.name);
 
-  panel
-    .append('rect')
-    .attr('class', 'genome-background')
-    .attr('x', 0)
-    .attr('y', 0)
-    .attr('width', innerWidth)
-    .attr('height', panelHeight)
-    .attr('fill', '#f8f8f8')
-    .attr('stroke', '#ccc');
+  panel.append('g').attr('class', 'regions');
 
-  const centerY = panelHeight / 2;
-  panel
-    .append('line')
-    .attr('class', 'center-line')
-    .attr('x1', 0)
-    .attr('x2', innerWidth)
-    .attr('y1', centerY)
-    .attr('y2', centerY)
-    .attr('stroke', '#999')
-    .attr('stroke-width', 1);
-
-  renderRuler(panel, xScale, panelHeight, innerWidth);
-  renderLcbBlocks(panel, genomeDataIndex, lcbs, colors, xScale, panelHeight, centerY, referenceGenomeIndex);
+  renderRuler(panel, xScale);
+  renderLcbBlocks(panel, genomeDataIndex, lcbs, colors, xScale, referenceGenomeIndex);
 }
 
 /** Render a collapsed bar for a hidden genome */
@@ -342,13 +363,12 @@ function renderHiddenPanel(
 
   panel
     .append('text')
-    .attr('x', -10)
-    .attr('y', HIDDEN_PANEL_HEIGHT / 2)
-    .attr('text-anchor', 'end')
-    .attr('dominant-baseline', 'middle')
+    .attr('x', 10)
+    .attr('y', HIDDEN_PANEL_HEIGHT / 2 - 2)
     .attr('class', 'genome-label genome-label-hidden')
-    .attr('font-style', 'italic')
-    .attr('fill', '#999')
+    .attr('font-family', 'sans-serif')
+    .attr('font-size', '10px')
+    .attr('fill', '#222')
     .text(genome.name);
 
   panel
@@ -357,9 +377,8 @@ function renderHiddenPanel(
     .attr('x', 0)
     .attr('y', 0)
     .attr('width', innerWidth)
-    .attr('height', HIDDEN_PANEL_HEIGHT)
-    .attr('fill', '#eee')
-    .attr('stroke', '#ccc');
+    .attr('height', 20)
+    .attr('fill', '#aaa');
 }
 
 function renderLcbBlocks(
@@ -368,10 +387,10 @@ function renderLcbBlocks(
   lcbs: readonly Lcb[],
   colors: readonly string[],
   xScale: d3.ScaleLinear<number, number>,
-  panelHeight: number,
-  centerY: number,
   referenceGenomeIndex: number,
 ): void {
+  const regionGroup = panel.select<SVGGElement>('.regions');
+
   for (let li = 0; li < lcbs.length; li++) {
     const lcb = lcbs[li]!;
     const left = lcb.left[genomeDataIndex];
@@ -381,10 +400,9 @@ function renderLcbBlocks(
     const reverse = isVisuallyReverse(lcb, genomeDataIndex, referenceGenomeIndex);
     const x = xScale(left);
     const blockWidth = xScale(right) - xScale(left);
-    const blockHeight = panelHeight / 2 - 4;
-    const y = reverse ? centerY + 2 : centerY - blockHeight - 2;
+    const y = reverse ? Y_POS_OFFSET + LCB_HEIGHT : Y_POS_OFFSET;
 
-    panel
+    regionGroup
       .append('rect')
       .attr('class', 'lcb-block')
       .attr('data-lcb-index', String(li))
@@ -392,28 +410,58 @@ function renderLcbBlocks(
       .attr('x', x)
       .attr('y', y)
       .attr('width', Math.max(blockWidth, 2))
-      .attr('height', blockHeight)
-      .attr('fill', colors[li]!)
-      .attr('fill-opacity', 0.6)
-      .attr('stroke', colors[li]!)
-      .attr('stroke-width', 1);
+      .attr('height', LCB_HEIGHT)
+      .attr('fill', colors[li]!);
   }
 }
 
 function renderRuler(
   panel: d3.Selection<SVGGElement, unknown, null, undefined>,
   xScale: d3.ScaleLinear<number, number>,
-  panelHeight: number,
-  innerWidth: number,
 ): void {
-  const tickCount = Math.min(10, Math.floor(innerWidth / 80));
-  const axis = d3.axisBottom(xScale).ticks(tickCount).tickFormat(d3.format('~s'));
+  const axis = d3.axisBottom(xScale)
+    .ticks(5)
+    .tickSize(10)
+    .tickFormat(d3.format('d'));
 
   panel
     .append('g')
     .attr('class', 'ruler')
-    .attr('transform', `translate(0,${panelHeight})`)
     .call(axis);
+}
+
+/** Compute midpoint line path for an LCB across visible genomes (legacy backbone style) */
+function computeConnectorPath(
+  lcb: Lcb,
+  visibleOrder: readonly number[],
+  state: ViewerState,
+  config: ViewerConfig,
+  getScale: (dataIndex: number) => d3.ScaleLinear<number, number>,
+): string | undefined {
+  const lineGen = d3.line<[number, number]>()
+    .x(d => d[0])
+    .y(d => d[1]);
+
+  const points: [number, number][] = [];
+
+  for (const dataIndex of visibleOrder) {
+    const left = lcb.left[dataIndex];
+    const right = lcb.right[dataIndex];
+    if (!left || !right) continue;
+
+    const scale = getScale(dataIndex);
+    const midX = scale(left) + (scale(right) - scale(left)) / 2;
+    const displayIndex = state.genomeOrder.indexOf(dataIndex);
+    const panelY = computePanelY(state, config, displayIndex);
+    const reverse = isVisuallyReverse(lcb, dataIndex, state.referenceGenomeIndex);
+    const blockY = reverse ? Y_POS_OFFSET + LCB_HEIGHT : Y_POS_OFFSET;
+    const midY = panelY + blockY + LCB_HEIGHT / 2;
+
+    points.push([midX, midY]);
+  }
+
+  if (points.length < 2) return undefined;
+  return lineGen(points) ?? undefined;
 }
 
 function renderConnectingLines(
@@ -426,61 +474,29 @@ function renderConnectingLines(
   const innerWidth = state.innerWidth;
   const visibleOrder = getVisibleGenomeOrder(state);
 
-  for (let vi = 0; vi < visibleOrder.length - 1; vi++) {
-    const topDataIndex = visibleOrder[vi]!;
-    const bottomDataIndex = visibleOrder[vi + 1]!;
-    const topGenome = state.alignment.genomes[topDataIndex]!;
-    const bottomGenome = state.alignment.genomes[bottomDataIndex]!;
+  const linesGroup = root.insert('g', ':first-child')
+    .attr('class', 'lcb-lines');
 
-    // Find display indices for Y computation
-    const topDisplayIndex = state.genomeOrder.indexOf(topDataIndex);
-    const bottomDisplayIndex = state.genomeOrder.indexOf(bottomDataIndex);
-    const topPanelY = computePanelY(state, config, topDisplayIndex);
-    const bottomPanelY = computePanelY(state, config, bottomDisplayIndex);
-    const topY = topPanelY + config.panelHeight;
-    const bottomY = bottomPanelY;
+  const makeScale = (dataIndex: number): d3.ScaleLinear<number, number> => {
+    const genome = state.alignment.genomes[dataIndex]!;
+    return d3.scaleLinear()
+      .domain([0, genome.length])
+      .range([1, innerWidth + 1]);
+  };
 
-    const topScale = d3
-      .scaleLinear()
-      .domain([1, topGenome.length])
-      .range([0, innerWidth]);
-    const bottomScale = d3
-      .scaleLinear()
-      .domain([1, bottomGenome.length])
-      .range([0, innerWidth]);
+  for (let li = 0; li < lcbs.length; li++) {
+    const lcb = lcbs[li]!;
+    const pathD = computeConnectorPath(lcb, visibleOrder, state, config, makeScale);
+    if (!pathD) continue;
 
-    for (let li = 0; li < lcbs.length; li++) {
-      const lcb = lcbs[li]!;
-      const topLeft = lcb.left[topDataIndex];
-      const topRight = lcb.right[topDataIndex];
-      const bottomLeft = lcb.left[bottomDataIndex];
-      const bottomRight = lcb.right[bottomDataIndex];
-
-      if (
-        !topLeft || !topRight || !bottomLeft || !bottomRight
-      ) {
-        continue;
-      }
-
-      const tl = topScale(topLeft);
-      const tr = topScale(topRight);
-      const bl = bottomScale(bottomLeft);
-      const br = bottomScale(bottomRight);
-
-      const path = `M${tl},${topY} L${bl},${bottomY} L${br},${bottomY} L${tr},${topY} Z`;
-
-      root
-        .append('path')
-        .attr('class', 'lcb-connector')
-        .attr('data-lcb-index', String(li))
-        .attr('data-genome-top-data', String(topDataIndex))
-        .attr('data-genome-bottom-data', String(bottomDataIndex))
-        .attr('d', path)
-        .attr('fill', colors[li]!)
-        .attr('fill-opacity', 0.2)
-        .attr('stroke', colors[li]!)
-        .attr('stroke-width', 0.5);
-    }
+    linesGroup
+      .append('path')
+      .attr('class', 'lcb-connector')
+      .attr('data-lcb-index', String(li))
+      .attr('d', pathD)
+      .attr('stroke', colors[li]!)
+      .attr('stroke-width', 1)
+      .attr('fill', 'none');
   }
 }
 
@@ -501,8 +517,7 @@ function updatePanelsOnZoom(
     if (state.hiddenGenomes.has(dataIndex)) continue;
 
     const scale = getZoomedScale(state, dataIndex);
-    const tickCount = Math.min(10, Math.floor(state.innerWidth / 80));
-    const axis = d3.axisBottom(scale).ticks(tickCount).tickFormat(d3.format('~s'));
+    const axis = d3.axisBottom(scale).ticks(5).tickSize(10).tickFormat(d3.format('d'));
 
     // Update ruler
     root.select(`.genome-panel[data-genome-data-index="${dataIndex}"] .ruler`).call(axis as never);
@@ -528,41 +543,26 @@ function updatePanelsOnZoom(
   updateConnectingLinesOnZoom(root, state, lcbs, config);
 }
 
-/** Update connecting line trapezoids when zoom changes */
+/** Update connecting midpoint lines when zoom changes */
 function updateConnectingLinesOnZoom(
   root: d3.Selection<SVGGElement, unknown, null, undefined>,
   state: ViewerState,
   lcbs: readonly Lcb[],
   config: ViewerConfig,
 ): void {
+  const visibleOrder = getVisibleGenomeOrder(state);
+  const getScale = (dataIndex: number) => getZoomedScale(state, dataIndex);
+
   root.selectAll('.lcb-connector').each(function () {
     const el = d3.select(this);
     const li = Number(el.attr('data-lcb-index'));
-    const topDataIndex = Number(el.attr('data-genome-top-data'));
-    const bottomDataIndex = Number(el.attr('data-genome-bottom-data'));
     const lcb = lcbs[li];
     if (!lcb) return;
 
-    const topLeft = lcb.left[topDataIndex];
-    const topRight = lcb.right[topDataIndex];
-    const bottomLeft = lcb.left[bottomDataIndex];
-    const bottomRight = lcb.right[bottomDataIndex];
-
-    if (!topLeft || !topRight || !bottomLeft || !bottomRight) return;
-
-    const topScale = getZoomedScale(state, topDataIndex);
-    const bottomScale = getZoomedScale(state, bottomDataIndex);
-    const topDisplayIndex = state.genomeOrder.indexOf(topDataIndex);
-    const bottomDisplayIndex = state.genomeOrder.indexOf(bottomDataIndex);
-    const topY = computePanelY(state, config, topDisplayIndex) + config.panelHeight;
-    const bottomY = computePanelY(state, config, bottomDisplayIndex);
-
-    const tl = topScale(topLeft);
-    const tr = topScale(topRight);
-    const bl = bottomScale(bottomLeft);
-    const br = bottomScale(bottomRight);
-
-    el.attr('d', `M${tl},${topY} L${bl},${bottomY} L${br},${bottomY} L${tr},${topY} Z`);
+    const pathD = computeConnectorPath(lcb, visibleOrder, state, config, getScale);
+    if (pathD) {
+      el.attr('d', pathD);
+    }
   });
 }
 
