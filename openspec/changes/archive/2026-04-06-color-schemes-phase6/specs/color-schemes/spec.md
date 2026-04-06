@@ -1,20 +1,4 @@
-## Purpose
-
-Defines the color scheme system for alignment visualization: backbone LCB color, backbone multiplicity color, LCB color, offset color, multiplicity color, multiplicity type color, and their normalized variants, with a dynamic color menu based on model type.
-## Requirements
-### Requirement: Backbone LCB color scheme
-The system SHALL provide a color scheme that colors backbone regions (conserved among all genomes) in mauve color, with subset-conserved regions in distinct colors per multiplicity type. This scheme SHALL only be available for XMFA alignments with computed backbone data. **Status: DEFERRED** — requires backbone data support.
-
-#### Scenario: Apply backbone LCB color
-- **WHEN** user selects the Backbone/LCB color scheme from the Color Scheme menu with a progressiveMauve alignment that has backbone data
-- **THEN** system colors backbone segments in mauve and lineage-specific segments in distinct colors
-
-### Requirement: Backbone multiplicity color scheme
-The system SHALL provide a color scheme that assigns distinct colors based on the exact presence/absence pattern of a segment across genomes, using HSB cylindrical color space. This scheme SHALL only be available for XMFA alignments with computed backbone data. **Status: DEFERRED** — requires backbone data support.
-
-#### Scenario: Apply backbone multiplicity color
-- **WHEN** user selects Backbone Multiplicity color scheme with backbone data available
-- **THEN** system colors each segment according to which exact combination of genomes share it
+## MODIFIED Requirements
 
 ### Requirement: LCB color scheme
 The system SHALL assign each LCB a unique color based on HSB hue rotation with a 1/6 bump (`BUMP_SIZE = 1/6`). The hue for LCB index `i` is computed as `(i * BUMP_SIZE) % 1 * colorIncrement + (i * BUMP_SIZE) % 1` with saturation `MATCH_SAT = 0.8` and brightness `MATCH_BRIGHT = 0.65`. This scheme SHALL be the default color scheme. HSB to hex conversion SHALL match Java's `Color.getHSBColor` behavior.
@@ -85,6 +69,22 @@ The system SHALL provide a `<select>` dropdown in the controls bar allowing user
 - **WHEN** user opens an alignment without backbone data
 - **THEN** the Color Scheme menu does not include backbone-specific options
 
+### Requirement: Backbone LCB color scheme
+The system SHALL provide a color scheme that colors backbone regions (conserved among all genomes) in mauve color, with subset-conserved regions in distinct colors per multiplicity type. This scheme SHALL only be available for XMFA alignments with computed backbone data. **Status: DEFERRED** — requires backbone data support.
+
+#### Scenario: Apply backbone LCB color
+- **WHEN** user selects the Backbone/LCB color scheme from the Color Scheme menu with a progressiveMauve alignment that has backbone data
+- **THEN** system colors backbone segments in mauve and lineage-specific segments in distinct colors
+
+### Requirement: Backbone multiplicity color scheme
+The system SHALL provide a color scheme that assigns distinct colors based on the exact presence/absence pattern of a segment across genomes, using HSB cylindrical color space. This scheme SHALL only be available for XMFA alignments with computed backbone data. **Status: DEFERRED** — requires backbone data support.
+
+#### Scenario: Apply backbone multiplicity color
+- **WHEN** user selects Backbone Multiplicity color scheme with backbone data available
+- **THEN** system colors each segment according to which exact combination of genomes share it
+
+## ADDED Requirements
+
 ### Requirement: HSB to hex color conversion
 The system SHALL provide an `hsbToHex()` function that converts HSB color values (hue 0–1, saturation 0–1, brightness 0–1) to hex color strings, matching Java's `Color.getHSBColor` behavior. Hue values SHALL wrap around using modular arithmetic `((h % 1) + 1) % 1`.
 
@@ -95,4 +95,3 @@ The system SHALL provide an `hsbToHex()` function that converts HSB color values
 #### Scenario: Wrap negative hue values
 - **WHEN** `hsbToHex(-0.5, 0.8, 0.65)` is called
 - **THEN** the hue SHALL wrap to 0.5 before conversion
-
