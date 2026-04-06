@@ -35,6 +35,11 @@ import { applyColorScheme, getAvailableSchemes, DEFAULT_COLOR_SCHEME_ID } from '
 import type { ColorSchemeId } from './color-schemes.ts';
 import { createColorSchemeMenu } from './color-scheme-menu.ts';
 import type { ColorSchemeMenuHandle } from './color-scheme-menu.ts';
+import { setupRegionSelection } from './region-selection.ts';
+import type { RegionSelectionHandle } from './region-selection.ts';
+import { setupExportShortcut, createImageExportDialog } from './image-export.ts';
+import { setupPrintSupport, printAlignment } from './print-support.ts';
+import { setupNavigatorShortcut } from './sequence-navigator.ts';
 
 export interface ViewerConfig {
   readonly width: number;
@@ -69,6 +74,7 @@ export interface ViewerHandle {
   readonly annotationsHandle: AnnotationsHandle | undefined;
   readonly optionsPanelHandle: OptionsPanelHandle;
   readonly colorSchemeMenuHandle: ColorSchemeMenuHandle;
+  readonly regionSelectionHandle: RegionSelectionHandle;
   readonly getState: () => ViewerState;
   readonly destroy: () => void;
 }
@@ -131,7 +137,9 @@ export function renderAlignment(
     .append('svg')
     .attr('width', width)
     .attr('height', totalHeight)
-    .attr('viewBox', `0 0 ${width} ${totalHeight}`);
+    .attr('viewBox', `0 0 ${width} ${totalHeight}`)
+    .style('overflow', 'hidden')
+    .style('display', 'block');
 
   const root = svg
     .append('g')
@@ -170,11 +178,14 @@ export function renderAlignment(
       showContigs: optionsState.showContigs,
     });
     cursorHandle.update(viewerState);
+    regionSelectionHandle.update(viewerState);
   });
 
   const cursorHandle = setupCursor(svgNode, viewerState, config, (sourceGenomeIndex, position) => {
     alignOnPosition(svgNode, zoomHandle, viewerState, config, sourceGenomeIndex, position);
   });
+
+  const regionSelectionHandle = setupRegionSelection(svgNode, viewerState, config);
 
   // Controls bar: groups navigation toolbar and options panel on one line
   const controlsBar = document.createElement('div');
@@ -215,6 +226,7 @@ export function renderAlignment(
       showContigs: optionsState.showContigs,
     });
     cursorHandle.rebuildOverlays(viewerState);
+    regionSelectionHandle.rebuildOverlays(viewerState);
   }
 
   function findReferenceDisplayIndex(): number {
@@ -322,6 +334,12 @@ export function renderAlignment(
         showContigs: enabled,
       });
     },
+    onExportImage: () => {
+      createImageExportDialog(container, svgNode);
+    },
+    onPrint: () => {
+      printAlignment(svgNode);
+    },
   });
 
   const availableSchemes = getAvailableSchemes(alignment);
@@ -338,6 +356,30 @@ export function renderAlignment(
     },
   );
 
+  // Image export shortcut (Ctrl+E)
+  const cleanupExport = setupExportShortcut(svgNode, () => container);
+
+  // Print support (Ctrl+P)
+  const cleanupPrint = setupPrintSupport(svgNode);
+
+  // Sequence navigator shortcut (Ctrl+I) — only if annotations are available
+  const genomeNames = alignment.genomes.map((g) => g.name);
+  const cleanupNavigator = annotations?.size
+    ? setupNavigatorShortcut(
+        () => container,
+        annotations,
+        genomeNames,
+        (genomeIndex, start, end) => {
+          // Navigate to the midpoint of the feature
+          const midpoint = Math.round((start + end) / 2);
+          alignOnPosition(svgNode, zoomHandle, viewerState, config, genomeIndex, midpoint);
+        },
+        (genomeIndex, position) => {
+          alignOnPosition(svgNode, zoomHandle, viewerState, config, genomeIndex, position);
+        },
+      )
+    : undefined;
+
   return {
     svg: svgNode,
     zoomHandle,
@@ -347,8 +389,13 @@ export function renderAlignment(
     annotationsHandle,
     optionsPanelHandle,
     colorSchemeMenuHandle,
+    regionSelectionHandle,
     getState: () => viewerState,
     destroy: () => {
+      cleanupNavigator?.();
+      cleanupPrint();
+      cleanupExport();
+      regionSelectionHandle.destroy();
       annotationsHandle?.destroy();
       tooltipHandle?.destroy();
       colorSchemeMenuHandle.destroy();

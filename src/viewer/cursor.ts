@@ -117,6 +117,12 @@ export function setupCursor(
         .attr('height', config.panelHeight)
         .attr('fill', 'transparent')
         .style('cursor', 'crosshair')
+        .on('wheel', (event: WheelEvent) => {
+          // Forward wheel events to SVG so D3 zoom can handle Ctrl+scroll
+          const cloned = new WheelEvent(event.type, event);
+          svg.dispatchEvent(cloned);
+          if (event.ctrlKey) event.preventDefault();
+        })
         .on('mousemove', (event: MouseEvent) => {
           handleMouseMove(dataIndex, event);
         })

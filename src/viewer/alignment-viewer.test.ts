@@ -164,6 +164,7 @@ describe('renderAlignment', () => {
     expect(handle.destroy).toBeInstanceOf(Function);
     expect(handle.zoomHandle).toBeDefined();
     expect(handle.cursorHandle).toBeDefined();
+    expect(handle.regionSelectionHandle).toBeDefined();
     expect(handle.getState).toBeInstanceOf(Function);
   });
 

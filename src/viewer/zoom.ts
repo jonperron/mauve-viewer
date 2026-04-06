@@ -105,7 +105,9 @@ export function setupZoom(
   function panRight(): void {
     const current = getCurrentTransform();
     const shiftAmount = width * zoomConfig.scrollPercent;
-    applyTransform(d3.zoomIdentity.translate(current.x - shiftAmount, 0).scale(current.k));
+    const minX = -(width * (current.k - 1));
+    const newX = Math.max(current.x - shiftAmount, minX);
+    applyTransform(d3.zoomIdentity.translate(newX, 0).scale(current.k));
   }
 
   function reset(): void {
@@ -143,7 +145,9 @@ export function setupZoom(
           ? zoomConfig.acceleratedScrollPercent
           : zoomConfig.scrollPercent;
         const shift = width * percent;
-        applyTransform(d3.zoomIdentity.translate(current.x - shift, 0).scale(current.k));
+        const minX = -(width * (current.k - 1));
+        const newX = Math.max(current.x - shift, minX);
+        applyTransform(d3.zoomIdentity.translate(newX, 0).scale(current.k));
         break;
       }
     }

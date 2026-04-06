@@ -153,6 +153,26 @@
     .options-item input[type="checkbox"] {
       margin: 0;
     }
+    .options-separator {
+      margin: 4px 0;
+      border: none;
+      border-top: 1px solid #ddd;
+    }
+    .options-action-btn {
+      display: block;
+      width: 100%;
+      padding: 6px 12px;
+      border: none;
+      background: none;
+      text-align: left;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      color: #333;
+    }
+    .options-action-btn:hover {
+      background: #e8f0fe;
+    }
     .color-scheme-menu {
       display: inline-block;
       margin-left: 8px;
@@ -175,6 +195,199 @@
     }
     .color-scheme-select:hover {
       border-color: #999;
+    }
+    /* Image export dialog */
+    .image-export-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 1000;
+    }
+    .image-export-dialog {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1001;
+    }
+    .export-dialog-content {
+      background: #fff;
+      border-radius: 8px;
+      padding: 24px;
+      min-width: 320px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+    }
+    .export-dialog-content h3 {
+      margin: 0 0 16px;
+      font-size: 18px;
+    }
+    .export-field {
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .export-field label {
+      min-width: 80px;
+      font-size: 13px;
+    }
+    .export-field input, .export-field select {
+      flex: 1;
+      height: 30px;
+      padding: 0 8px;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .export-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .export-actions button {
+      height: 32px;
+      padding: 0 16px;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .export-cancel-btn { background: #f5f5f5; }
+    .export-confirm-btn { background: #4a90d9; color: #fff; border-color: #3a7bc8; }
+    .export-confirm-btn:hover { background: #3a7bc8; }
+    /* Sequence navigator */
+    .sequence-navigator {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1001;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+      min-width: 420px;
+      max-width: 600px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .seq-nav-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+    }
+    .seq-nav-header h3 { margin: 0; font-size: 16px; }
+    .seq-nav-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #888;
+      line-height: 1;
+    }
+    .seq-nav-tabs {
+      display: flex;
+      border-bottom: 1px solid #eee;
+    }
+    .seq-nav-tab {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      background: #f5f5f5;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.15s;
+    }
+    .seq-nav-tab.active {
+      background: #fff;
+      font-weight: 600;
+      border-bottom: 2px solid #4a90d9;
+    }
+    .seq-nav-panel {
+      padding: 12px 16px;
+    }
+    .seq-nav-field { margin-bottom: 8px; }
+    .seq-nav-field input, .seq-nav-field select {
+      width: 100%;
+      height: 32px;
+      padding: 0 8px;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .seq-nav-options {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .seq-nav-options select {
+      flex: 1;
+      height: 30px;
+      padding: 0 6px;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .seq-nav-search-btn, .seq-nav-goto-btn {
+      width: 100%;
+      height: 32px;
+      border: 1px solid #3a7bc8;
+      border-radius: 4px;
+      background: #4a90d9;
+      color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .seq-nav-search-btn:hover, .seq-nav-goto-btn:hover {
+      background: #3a7bc8;
+    }
+    .seq-nav-results {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .seq-nav-result {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .seq-nav-result:hover {
+      background: #e8f0fe;
+    }
+    .seq-nav-result-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #888;
+      margin-bottom: 2px;
+    }
+    .seq-nav-result-type {
+      background: #eee;
+      padding: 1px 4px;
+      border-radius: 2px;
+    }
+    .seq-nav-result-info {
+      font-size: 13px;
+      margin-bottom: 2px;
+    }
+    .seq-nav-result-coords {
+      font-size: 11px;
+      color: #666;
+      font-family: monospace;
+    }
+    .seq-nav-no-results {
+      padding: 16px;
+      text-align: center;
+      color: #888;
+      font-size: 13px;
+    }
+    .seq-nav-more {
+      padding: 8px;
+      text-align: center;
+      color: #888;
+      font-size: 12px;
     }
   </style>
 </head>
