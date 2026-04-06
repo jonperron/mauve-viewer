@@ -31,6 +31,10 @@ import { createFeatureTooltip } from './feature-tooltip.ts';
 import type { FeatureTooltipHandle } from './feature-tooltip.ts';
 import { createOptionsPanel } from './options-panel.ts';
 import type { OptionsPanelHandle, OptionsState } from './options-panel.ts';
+import { applyColorScheme, getAvailableSchemes, DEFAULT_COLOR_SCHEME_ID } from './color-schemes.ts';
+import type { ColorSchemeId } from './color-schemes.ts';
+import { createColorSchemeMenu } from './color-scheme-menu.ts';
+import type { ColorSchemeMenuHandle } from './color-scheme-menu.ts';
 
 export interface ViewerConfig {
   readonly width: number;
@@ -48,24 +52,12 @@ export interface ViewerConfig {
 export const Y_POS_OFFSET = 30;
 export const LCB_HEIGHT = 22;
 
-/** D3 schemeCategory20 color palette used by legacy viewer */
-const SCHEME_CATEGORY_20: readonly string[] = [
-  '#1f77b4', '#aec7e8', '#ff7f0e', '#ffbb78', '#2ca02c',
-  '#98df8a', '#d62728', '#ff9896', '#9467bd', '#c5b0d5',
-  '#8c564b', '#c49c94', '#e377c2', '#f7b6d2', '#7f7f7f',
-  '#c7c7c7', '#bcbd22', '#dbdb8d', '#17becf', '#9edae5',
-];
-
 const DEFAULT_CONFIG: ViewerConfig = {
   width: 1000,
   panelHeight: Y_POS_OFFSET + 2 * LCB_HEIGHT,
   panelGap: 140 - (Y_POS_OFFSET + 2 * LCB_HEIGHT),
   margin: { top: 20, right: 20, bottom: 20, left: 120 },
 };
-
-function assignLcbColors(lcbs: readonly Lcb[]): readonly string[] {
-  return lcbs.map((_, i) => SCHEME_CATEGORY_20[i % SCHEME_CATEGORY_20.length]!);
-}
 
 /** Active viewer handle for cleanup and interaction */
 export interface ViewerHandle {
@@ -76,6 +68,7 @@ export interface ViewerHandle {
   readonly trackControlsHandle: TrackControlsHandle;
   readonly annotationsHandle: AnnotationsHandle | undefined;
   readonly optionsPanelHandle: OptionsPanelHandle;
+  readonly colorSchemeMenuHandle: ColorSchemeMenuHandle;
   readonly getState: () => ViewerState;
   readonly destroy: () => void;
 }
@@ -112,7 +105,9 @@ export function renderAlignment(
 ): ViewerHandle {
   const { lcbs } = alignment;
   const { width, margin } = config;
-  const colors = assignLcbColors(lcbs);
+  // Mutable color state — held in closure for color scheme callbacks (intentional exception to immutability rule)
+  let currentSchemeId: ColorSchemeId = DEFAULT_COLOR_SCHEME_ID;
+  let colors = applyColorScheme(currentSchemeId, alignment);
 
   // Clean up previous viewer
   d3.select(container).select('.alignment-wrapper').remove();
@@ -329,6 +324,20 @@ export function renderAlignment(
     },
   });
 
+  const availableSchemes = getAvailableSchemes(alignment);
+  const colorSchemeMenuHandle = createColorSchemeMenu(
+    controlsBar,
+    availableSchemes,
+    currentSchemeId,
+    {
+      onSchemeChange: (schemeId) => {
+        currentSchemeId = schemeId;
+        colors = applyColorScheme(schemeId, alignment);
+        rerenderPanels();
+      },
+    },
+  );
+
   return {
     svg: svgNode,
     zoomHandle,
@@ -337,10 +346,12 @@ export function renderAlignment(
     trackControlsHandle,
     annotationsHandle,
     optionsPanelHandle,
+    colorSchemeMenuHandle,
     getState: () => viewerState,
     destroy: () => {
       annotationsHandle?.destroy();
       tooltipHandle?.destroy();
+      colorSchemeMenuHandle.destroy();
       optionsPanelHandle.destroy();
       trackControlsHandle.destroy();
       toolbarHandle.destroy();
