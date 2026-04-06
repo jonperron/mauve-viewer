@@ -6,12 +6,14 @@ export interface OptionsState {
   readonly showContigs: boolean;
 }
 
-/** Callbacks triggered when an option is toggled */
+/** Callbacks triggered when an option is toggled or an action is invoked */
 export interface OptionsCallbacks {
   readonly onToggleGenomeId: (enabled: boolean) => void;
   readonly onToggleConnectingLines: (enabled: boolean) => void;
   readonly onToggleFeatures: (enabled: boolean) => void;
   readonly onToggleContigs: (enabled: boolean) => void;
+  readonly onExportImage?: () => void;
+  readonly onPrint?: () => void;
 }
 
 /** Handle returned by createOptionsPanel for lifecycle management */
@@ -29,11 +31,14 @@ export const DEFAULT_OPTIONS: Readonly<OptionsState> = Object.freeze({
   showContigs: true,
 });
 
+/** Required toggle callback keys (always defined) */
+type ToggleCallbackKey = 'onToggleGenomeId' | 'onToggleConnectingLines' | 'onToggleFeatures' | 'onToggleContigs';
+
 interface CheckboxDef {
   readonly name: string;
   readonly label: string;
   readonly stateKey: keyof OptionsState;
-  readonly callbackKey: keyof OptionsCallbacks;
+  readonly callbackKey: ToggleCallbackKey;
 }
 
 const CHECKBOX_DEFS: readonly CheckboxDef[] = [
@@ -84,6 +89,37 @@ export function createOptionsPanel(
     label.appendChild(document.createTextNode(` ${def.label}`));
     wrapper.appendChild(label);
     dropdown.appendChild(wrapper);
+  }
+
+  // Action buttons (separator + buttons)
+  if (callbacks.onExportImage || callbacks.onPrint) {
+    const separator = document.createElement('hr');
+    separator.className = 'options-separator';
+    dropdown.appendChild(separator);
+
+    if (callbacks.onExportImage) {
+      const exportBtn = document.createElement('button');
+      exportBtn.type = 'button';
+      exportBtn.className = 'options-action-btn';
+      exportBtn.textContent = 'Export Image (Ctrl+E)';
+      exportBtn.addEventListener('click', () => {
+        dropdown.classList.remove('show');
+        callbacks.onExportImage?.();
+      });
+      dropdown.appendChild(exportBtn);
+    }
+
+    if (callbacks.onPrint) {
+      const printBtn = document.createElement('button');
+      printBtn.type = 'button';
+      printBtn.className = 'options-action-btn';
+      printBtn.textContent = 'Print (Ctrl+P)';
+      printBtn.addEventListener('click', () => {
+        dropdown.classList.remove('show');
+        callbacks.onPrint?.();
+      });
+      dropdown.appendChild(printBtn);
+    }
   }
 
   btn.addEventListener('click', (e) => {

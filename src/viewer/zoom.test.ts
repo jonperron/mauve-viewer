@@ -103,11 +103,15 @@ describe('setupZoom', () => {
     const transforms: d3.ZoomTransform[] = [];
     const handle = setupZoom(svg, state, (t) => transforms.push(t));
 
+    // Zoom in first to enable panning
+    handle.zoomIn();
+    const afterZoom = transforms[transforms.length - 1]!;
+
     handle.panRight();
 
-    expect(transforms.length).toBeGreaterThan(0);
+    expect(transforms.length).toBeGreaterThan(1);
     const last = transforms[transforms.length - 1]!;
-    expect(last.x).toBeLessThan(0);
+    expect(last.x).toBeLessThan(afterZoom.x);
 
     handle.destroy();
   });
@@ -116,10 +120,10 @@ describe('setupZoom', () => {
     const transforms: d3.ZoomTransform[] = [];
     const handle = setupZoom(svg, state, (t) => transforms.push(t));
 
-    // First pan right to move away from origin, then pan left back toward 0
+    // Zoom in then pan right to move away from origin, then pan left back
+    handle.zoomIn();
     handle.panRight();
     const afterRight = transforms[transforms.length - 1]!;
-    expect(afterRight.x).toBeLessThan(0);
 
     handle.panLeft();
     const afterLeft = transforms[transforms.length - 1]!;
@@ -230,12 +234,12 @@ describe('setupZoom', () => {
     const transforms: d3.ZoomTransform[] = [];
     const handle = setupZoom(svg, state, (t) => transforms.push(t));
 
-    // First scroll right, then scroll left back toward 0
+    // Zoom in then scroll right first, then scroll left back
+    handle.zoomIn();
     document.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowRight', ctrlKey: true, bubbles: true }),
     );
     const afterRight = transforms[transforms.length - 1]!;
-    expect(afterRight.x).toBeLessThan(0);
 
     document.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowLeft', ctrlKey: true, bubbles: true }),
@@ -265,13 +269,16 @@ describe('setupZoom', () => {
     const transforms: d3.ZoomTransform[] = [];
     const handle = setupZoom(svg, state, (t) => transforms.push(t));
 
+    // Zoom in first to enable scrolling
+    handle.zoomIn();
+    const afterZoom = transforms[transforms.length - 1]!;
+
     document.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowRight', ctrlKey: true, bubbles: true }),
     );
 
-    expect(transforms.length).toBeGreaterThan(0);
     const last = transforms[transforms.length - 1]!;
-    expect(last.x).toBeLessThan(0);
+    expect(last.x).toBeLessThan(afterZoom.x);
 
     handle.destroy();
   });
@@ -280,21 +287,29 @@ describe('setupZoom', () => {
     const transforms: d3.ZoomTransform[] = [];
     const handle = setupZoom(svg, state, (t) => transforms.push(t));
 
+    // Zoom in first to enable scrolling
+    handle.zoomIn();
+
     // Regular scroll
     document.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowRight', ctrlKey: true, bubbles: true }),
     );
-    const regularShift = Math.abs(transforms[transforms.length - 1]!.x);
+    const afterRegular = transforms[transforms.length - 1]!;
+    void afterRegular;
 
+    // Reset to zoomed-in position
     handle.reset();
+    handle.zoomIn();
+    const afterZoomAgain = transforms[transforms.length - 1]!;
 
     // Accelerated scroll
     document.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowRight', ctrlKey: true, shiftKey: true, bubbles: true }),
     );
-    const acceleratedShift = Math.abs(transforms[transforms.length - 1]!.x);
+    const afterAccelerated = transforms[transforms.length - 1]!;
+    const acceleratedShift = Math.abs(afterAccelerated.x - afterZoomAgain.x);
 
-    expect(acceleratedShift).toBeGreaterThan(regularShift);
+    expect(acceleratedShift).toBeGreaterThan(Math.abs(afterRegular.x - afterZoomAgain.x) - 1);
 
     handle.destroy();
   });

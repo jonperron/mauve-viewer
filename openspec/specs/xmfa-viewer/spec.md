@@ -64,7 +64,7 @@ The system SHALL display annotated genomic features when viewing less than 1 Mbp
 - **THEN** system encodes the identifier via encodeURIComponent in the URL
 
 ### Requirement: Zoom and scroll navigation
-The system SHALL support zooming via Ctrl+scroll (mouse wheel with Ctrl held), drag-to-pan, programmatic zoom in/out/reset methods, and keyboard shortcuts. Ctrl+Up SHALL zoom in 2× centered on the current view. Ctrl+Down SHALL zoom out 2×. Ctrl+Left/Right SHALL scroll by 10% of the visible range. Shift+Ctrl+Left/Right SHALL scroll by 20% of the visible range (accelerated scrolling). The zoom range SHALL be constrained between 1× and 100,000× magnification. The system SHALL use D3 zoom behavior attached to the SVG element, applying the zoom transform uniformly to all genome panel scales. Double-click zoom SHALL be disabled.
+The system SHALL support zooming via Ctrl+scroll (mouse wheel with Ctrl held), drag-to-pan, programmatic zoom in/out/reset methods, and keyboard shortcuts. Ctrl+Up SHALL zoom in 2× centered on the current view. Ctrl+Down SHALL zoom out 2×. Ctrl+Left/Right SHALL scroll by 10% of the visible range. Shift+Ctrl+Left/Right SHALL scroll by 20% of the visible range (accelerated scrolling). The zoom range SHALL be constrained between 1× and 100,000× magnification. The system SHALL use D3 zoom behavior attached to the SVG element, applying the zoom transform uniformly to all genome panel scales. Double-click zoom SHALL be disabled. The D3 zoom behavior SHALL use a translateExtent of `[[0, 0], [width * 2, 0]]` to constrain horizontal panning and prevent scrolling past alignment boundaries.
 
 #### Scenario: Zoom in via keyboard
 - **WHEN** user presses Ctrl+Up
@@ -98,8 +98,12 @@ The system SHALL support zooming via Ctrl+scroll (mouse wheel with Ctrl held), d
 - **WHEN** the zoom transform changes
 - **THEN** system updates LCB block positions, ruler tick marks, and connecting line trapezoids for all genome panels simultaneously
 
+#### Scenario: Pan clamping prevents overflow
+- **WHEN** user pans horizontally to the edge of the alignment
+- **THEN** the translateExtent constraint prevents scrolling past the alignment boundaries
+
 ### Requirement: Mouse-based interaction
-The system SHALL display a cross-track cursor when the mouse hovers over any genome panel. The cursor SHALL appear as a black vertical bar (1.5px stroke) at the hovered nucleotide position and at the corresponding homologous positions in all other genome panels. Homologous position mapping SHALL use LCB-relative fractional offset: the fraction of the source position within its LCB is mapped to the same fraction in each target genome's corresponding LCB region, accounting for reverse-complement orientation. An info display SHALL show the genome name, nucleotide position, and LCB details (LCB number and coordinate range) for the hovered position. Clicking on a position SHALL smoothly center all genome panels on the homologous site with a 300ms animated transition.
+The system SHALL display a cross-track cursor when the mouse hovers over any genome panel. The cursor SHALL appear as a black vertical bar (1.5px stroke) at the hovered nucleotide position and at the corresponding homologous positions in all other genome panels. Homologous position mapping SHALL use LCB-relative fractional offset: the fraction of the source position within its LCB is mapped to the same fraction in each target genome's corresponding LCB region, accounting for reverse-complement orientation. An info display SHALL show the genome name, nucleotide position, and LCB details (LCB number and coordinate range) for the hovered position. Clicking on a position SHALL smoothly center all genome panels on the homologous site with a 300ms animated transition. Transparent cursor overlay rectangles SHALL forward wheel events to the SVG element so that Ctrl+scroll zoom functions correctly when the mouse is over any genome panel overlay. When Ctrl is held during a wheel event on the overlay, the event SHALL be prevented from default behavior to avoid browser page zoom.
 
 #### Scenario: Highlight homologous sites on hover
 - **WHEN** user moves the mouse over a position in one genome panel
@@ -116,6 +120,10 @@ The system SHALL display a cross-track cursor when the mouse hovers over any gen
 #### Scenario: Cursor disappears on mouse leave
 - **WHEN** user moves the mouse away from all genome panels
 - **THEN** system hides all cursor lines and the info overlay
+
+#### Scenario: Ctrl+scroll zoom over cursor overlays
+- **WHEN** user holds Ctrl and scrolls the mouse wheel while hovering over a cursor overlay
+- **THEN** the overlay forwards the wheel event to the SVG element, enabling D3 zoom behavior, and prevents default browser zoom
 
 ### Requirement: Genome reordering and reference change
 The system SHALL allow reordering the displayed genomes using up (▲) and down (▼) buttons in the track controls sidebar to the left of each genome panel, and changing the reference genome using an "R" button. The display order SHALL be maintained as a `genomeOrder` array that maps display indices to data indices; the original alignment data SHALL never be mutated. When the reference genome changes, LCB block orientation SHALL be computed visually using XOR logic: if the reference genome is on the reverse strand in an LCB, all genomes in that LCB SHALL have their visual orientation flipped. The `isVisuallyReverse()` function SHALL compute this on-the-fly without mutating alignment data. When genome order changes, the zoom SHALL reset to the initial 1× view.
@@ -172,15 +180,23 @@ The system SHALL allow hiding individual genomes from the full display using a m
 - **THEN** the total SVG height SHALL be recomputed, accounting for 20px collapsed bars instead of full panel heights
 
 ### Requirement: Printing and image export
-The system SHALL support printing the current view (Ctrl+P), page setup, print preview (Ctrl+Shift+P), and exporting the current view as a raster image (JPEG with 3 quality levels or PNG with custom dimensions) via File → Export Image (Ctrl+E). Print output uses 300 DPI for publication-quality vector graphics via PostScript/PDF.
+The system SHALL support printing the current view via Ctrl+P using the browser's native print dialog with a print-optimized stylesheet that isolates the alignment SVG in landscape orientation. The print stylesheet SHALL hide all non-alignment content and scale the SVG to fit the page width. The system SHALL support exporting the current view as a raster image via Ctrl+E, which opens a modal dialog with format selection (PNG or JPEG), JPEG quality presets (low at 0.5, medium at 0.75, high at 0.95), and configurable width and height (100–10000 px). The export SHALL clone the SVG, inline computed styles, render to a Canvas element, and trigger a file download. The dialog SHALL be dismissable via Cancel button, backdrop click, or Escape key.
 
 #### Scenario: Export as PNG
-- **WHEN** user selects File → Export Image and chooses PNG format with custom dimensions
-- **THEN** system renders the current alignment view to a PNG file at the specified resolution
+- **WHEN** user presses Ctrl+E, selects PNG format, sets custom dimensions, and clicks Export
+- **THEN** system renders the current alignment view to a PNG file and triggers a download of `alignment.png`
 
-#### Scenario: Print to PDF
-- **WHEN** user selects File → Print and chooses a PDF output option
-- **THEN** system renders a publication-quality vector graphic of the alignment view
+#### Scenario: Export as JPEG with quality presets
+- **WHEN** user presses Ctrl+E, selects JPEG format, chooses a quality level (low/medium/high), and clicks Export
+- **THEN** system renders the current alignment view to a JPEG file at the selected quality and triggers a download of `alignment.jpeg`
+
+#### Scenario: Print alignment
+- **WHEN** user presses Ctrl+P
+- **THEN** system clones the alignment SVG into a print-isolation wrapper, applies a landscape print stylesheet, invokes the browser print dialog, and removes the wrapper after the dialog closes
+
+#### Scenario: Cancel export dialog
+- **WHEN** user presses Escape, clicks Cancel, or clicks the backdrop in the export dialog
+- **THEN** system closes the dialog without exporting
 
 ### Requirement: Drag-and-drop file loading
 The system SHALL accept alignment files dropped onto a drop zone or selected via a file picker dialog. The system SHALL reject files larger than 500 MB.
@@ -224,15 +240,15 @@ The system SHALL highlight all homologous LCB blocks and their connecting trapez
 - **THEN** system returns all LCB blocks and connectors to their default appearance
 
 ### Requirement: ViewerHandle lifecycle API
-The `renderAlignment` function SHALL return a `ViewerHandle` object providing lifecycle management for the viewer. The `ViewerHandle` SHALL expose: a `destroy()` method that removes all event listeners and cleans up zoom, cursor, toolbar, track controls, options panel, annotations, and feature tooltip behaviors; a `getState()` method returning the current immutable `ViewerState`; the `svg` element reference; the `zoomHandle` for programmatic zoom/pan control (with `zoomIn()`, `zoomOut()`, `panLeft()`, `panRight()`, `reset()` methods); the `cursorHandle` for cursor behavior management; the `toolbarHandle` for navigation toolbar lifecycle management; the `trackControlsHandle` for track controls sidebar lifecycle management; the `optionsPanelHandle` for options panel lifecycle management; and the `annotationsHandle` for annotation rendering lifecycle management (if annotations are provided). The `renderAlignment` function SHALL accept an optional `AnnotationMap` parameter. On file reload, the caller SHALL call `destroy()` on the previous handle before creating a new viewer.
+The `renderAlignment` function SHALL return a `ViewerHandle` object providing lifecycle management for the viewer. The `ViewerHandle` SHALL expose: a `destroy()` method that removes all event listeners and cleans up zoom, cursor, toolbar, track controls, options panel, color scheme menu, region selection, annotations, feature tooltip, image export, print support, and sequence navigator behaviors; a `getState()` method returning the current immutable `ViewerState`; the `svg` element reference; the `zoomHandle` for programmatic zoom/pan control (with `zoomIn()`, `zoomOut()`, `panLeft()`, `panRight()`, `reset()` methods); the `cursorHandle` for cursor behavior management; the `toolbarHandle` for navigation toolbar lifecycle management; the `trackControlsHandle` for track controls sidebar lifecycle management; the `optionsPanelHandle` for options panel lifecycle management; the `colorSchemeMenuHandle` for color scheme menu lifecycle management; the `regionSelectionHandle` for region selection lifecycle management; and the `annotationsHandle` for annotation rendering lifecycle management (if annotations are provided). The `renderAlignment` function SHALL accept an optional `AnnotationMap` parameter. On file reload, the caller SHALL call `destroy()` on the previous handle before creating a new viewer.
 
 #### Scenario: Obtain viewer handle
 - **WHEN** `renderAlignment` is called with a container element and alignment data
-- **THEN** it returns a `ViewerHandle` with `svg`, `zoomHandle`, `cursorHandle`, `toolbarHandle`, `trackControlsHandle`, `optionsPanelHandle`, `annotationsHandle`, `getState()`, and `destroy()` members
+- **THEN** it returns a `ViewerHandle` with `svg`, `zoomHandle`, `cursorHandle`, `toolbarHandle`, `trackControlsHandle`, `optionsPanelHandle`, `colorSchemeMenuHandle`, `regionSelectionHandle`, `annotationsHandle`, `getState()`, and `destroy()` members
 
 #### Scenario: Destroy viewer on reload
 - **WHEN** a new alignment file is loaded while a viewer is already active
-- **THEN** the caller invokes `destroy()` on the existing `ViewerHandle` before rendering the new alignment, removing all event listeners, D3 behaviors, toolbar elements, track controls, options panel, annotations, and feature tooltips
+- **THEN** the caller invokes `destroy()` on the existing `ViewerHandle` before rendering the new alignment, removing all event listeners, D3 behaviors, toolbar elements, track controls, options panel, color scheme menu, region selection, annotations, feature tooltips, image export shortcut, print support, and sequence navigator
 
 #### Scenario: Access current state
 - **WHEN** `getState()` is called on the `ViewerHandle`
@@ -240,7 +256,7 @@ The `renderAlignment` function SHALL return a `ViewerHandle` object providing li
 
 #### Scenario: Render alignment with annotations
 - **WHEN** `renderAlignment` is called with an `AnnotationMap` parameter
-- **THEN** system sets up annotation rendering and feature tooltips, updating annotations on zoom/pan changes
+- **THEN** system sets up annotation rendering, feature tooltips, and sequence navigator shortcut (Ctrl+I), updating annotations on zoom/pan changes
 
 #### Scenario: Annotations update on zoom
 - **WHEN** the zoom transform changes and annotations are present
@@ -327,7 +343,7 @@ The `renderAlignment` function SHALL return a `ViewerHandle` that includes a `tr
 - **THEN** `trackControlsHandle.destroy()` is invoked, removing the sidebar from the DOM
 
 ### Requirement: Options panel
-The system SHALL display an Options Panel in a controls bar above the alignment SVG. The Options Panel SHALL contain a toggle button labeled "Options" with `aria-label="Toggle options panel"`. Clicking the toggle button SHALL show or hide a dropdown containing four checkboxes: "Show Genome ID", "LCB Connecting Lines", "Show Features (zoomed)", and "Show Contigs". All checkboxes SHALL default to checked (enabled). Clicking outside the panel SHALL close the dropdown. The controls bar SHALL group the Options Panel and the navigation toolbar on a single horizontal line using flexbox layout.
+The system SHALL display an Options Panel in a controls bar above the alignment SVG. The Options Panel SHALL contain a toggle button labeled "Options" with `aria-label="Toggle options panel"`. Clicking the toggle button SHALL show or hide a dropdown containing four checkboxes: "Show Genome ID", "LCB Connecting Lines", "Show Features (zoomed)", and "Show Contigs". All checkboxes SHALL default to checked (enabled). When `onExportImage` or `onPrint` callbacks are provided, the dropdown SHALL include a horizontal rule separator followed by action buttons: an "Export Image (Ctrl+E)" button (if `onExportImage` is provided) and a "Print (Ctrl+P)" button (if `onPrint` is provided). Clicking an action button SHALL close the dropdown and invoke the corresponding callback. Clicking outside the panel SHALL close the dropdown. The controls bar SHALL group the Options Panel and the navigation toolbar on a single horizontal line using flexbox layout.
 
 #### Scenario: Display options panel
 - **WHEN** `renderAlignment` is called with a container element and alignment data
@@ -344,6 +360,18 @@ The system SHALL display an Options Panel in a controls bar above the alignment 
 #### Scenario: Default option values
 - **WHEN** the options panel is created without explicit initial state
 - **THEN** all four checkboxes (Show Genome ID, LCB Connecting Lines, Show Features, Show Contigs) are checked
+
+#### Scenario: Export Image action button
+- **WHEN** the options panel is created with an `onExportImage` callback and user clicks "Export Image (Ctrl+E)" in the dropdown
+- **THEN** system closes the dropdown and invokes the `onExportImage` callback
+
+#### Scenario: Print action button
+- **WHEN** the options panel is created with an `onPrint` callback and user clicks "Print (Ctrl+P)" in the dropdown
+- **THEN** system closes the dropdown and invokes the `onPrint` callback
+
+#### Scenario: Action buttons separated from checkboxes
+- **WHEN** the options panel dropdown contains action buttons
+- **THEN** a horizontal rule separator visually separates the checkboxes from the action buttons
 
 ### Requirement: Genome ID display toggle
 The system SHALL toggle genome labels between the full filename (e.g. "genome1.fasta") and the name without extension (e.g. "genome1") when the "Show Genome ID" checkbox is toggled. The `getGenomeLabel(name, showGenomeId)` function SHALL return the full name when `showGenomeId` is true, and the name with the last file extension stripped when `showGenomeId` is false. If the name has no extension (no dot, or dot at position 0), the full name SHALL be returned unchanged. Label updates SHALL be applied in-place to all visible genome panel labels without re-rendering the entire view.
