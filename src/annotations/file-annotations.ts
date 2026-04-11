@@ -55,7 +55,7 @@ export async function loadAnnotationFiles(
   initialAnnotations: AnnotationMap,
 ): Promise<AnnotationMap> {
   const tasks = annotationFiles.map(async (file, index) => {
-    const genomeIndex = index + 1;
+    const genomeIndex = index;
     try {
       const content = await readFileAsText(file);
       const parsed = parseGenBankAnnotationFile(content, genomeIndex);
