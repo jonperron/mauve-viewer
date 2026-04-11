@@ -110,6 +110,26 @@ export function getGenomeLabel(name: string, showGenomeId: boolean): string {
   return dotIndex > 0 ? name.slice(0, dotIndex) : name;
 }
 
+/**
+ * Get a genome display label using an optional organism label.
+ * When label is provided:
+ *   - showGenomeId=true: "Organism Name [genome-id]"
+ *   - showGenomeId=false: "Organism Name"
+ * When label is absent, falls back to filename display.
+ */
+export function getGenomeLabelWithOrganism(
+  name: string,
+  showGenomeId: boolean,
+  label: string | undefined,
+): string {
+  if (label !== undefined) {
+    const dotIndex = name.lastIndexOf('.');
+    const orgId = dotIndex > 0 ? name.slice(0, dotIndex) : name;
+    return showGenomeId ? `${label} [${orgId}]` : label;
+  }
+  return getGenomeLabel(name, showGenomeId);
+}
+
 export function renderAlignment(
   container: HTMLElement,
   alignment: XmfaAlignment,
@@ -307,7 +327,7 @@ export function renderAlignment(
     for (let di = 0; di < viewerState.alignment.genomes.length; di++) {
       const dataIndex = viewerState.genomeOrder[di]!;
       const genome = viewerState.alignment.genomes[dataIndex]!;
-      const label = getGenomeLabel(genome.name, optionsState.showGenomeId);
+      const label = getGenomeLabelWithOrganism(genome.name, optionsState.showGenomeId, genome.label);
       root.select(`.genome-panel[data-genome-data-index="${dataIndex}"] .genome-label`)
         .text(label);
     }
@@ -446,7 +466,7 @@ function renderAllPanels(
 
 function renderGenomePanel(
   root: d3.Selection<SVGGElement, unknown, null, undefined>,
-  genome: { readonly name: string; readonly length: number },
+  genome: { readonly name: string; readonly label?: string; readonly length: number },
   panelY: number,
   genomeDataIndex: number,
   lcbs: readonly Lcb[],
@@ -475,7 +495,7 @@ function renderGenomePanel(
     .attr('font-family', 'sans-serif')
     .attr('font-size', '10px')
     .attr('fill', '#888')
-    .text(getGenomeLabel(genome.name, showGenomeId));
+    .text(getGenomeLabelWithOrganism(genome.name, showGenomeId, genome.label));
 
   panel.append('g').attr('class', 'regions');
 
@@ -486,7 +506,7 @@ function renderGenomePanel(
 /** Render a collapsed bar for a hidden genome */
 function renderHiddenPanel(
   root: d3.Selection<SVGGElement, unknown, null, undefined>,
-  genome: { readonly name: string },
+  genome: { readonly name: string; readonly label?: string },
   panelY: number,
   genomeDataIndex: number,
   innerWidth: number,
@@ -506,7 +526,7 @@ function renderHiddenPanel(
     .attr('font-family', 'sans-serif')
     .attr('font-size', '10px')
     .attr('fill', '#222')
-    .text(getGenomeLabel(genome.name, showGenomeId));
+    .text(getGenomeLabelWithOrganism(genome.name, showGenomeId, genome.label));
 
   panel
     .append('rect')

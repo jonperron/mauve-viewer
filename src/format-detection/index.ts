@@ -1,6 +1,7 @@
 /** Supported file formats for the viewer */
 export type FileFormat =
   | 'xmfa'
+  | 'mauve'
   | 'genbank'
   | 'fasta'
   | 'json'
@@ -11,6 +12,8 @@ export type FileFormat =
 const EXTENSION_MAP: Readonly<Record<string, FileFormat>> = {
   '.xmfa': 'xmfa',
   '.alignment': 'xmfa',
+  '.mauve': 'mauve',
+  '.mln': 'mauve',
   '.gbk': 'genbank',
   '.gb': 'genbank',
   '.genbank': 'genbank',
@@ -22,6 +25,7 @@ const EXTENSION_MAP: Readonly<Record<string, FileFormat>> = {
   '.raw': 'raw',
   '.embl': 'embl',
   '.xml': 'xml',
+  '.insdc': 'xml',
 };
 
 /**

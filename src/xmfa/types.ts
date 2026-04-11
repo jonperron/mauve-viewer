@@ -46,6 +46,7 @@ export interface Lcb {
 export interface Genome {
   readonly index: number;
   readonly name: string;
+  readonly label?: string;
   readonly length: number;
   readonly format: string;
 }

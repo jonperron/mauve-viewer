@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   loadAnnotationFiles,
   mergeAnnotationMaps,
-  parseGenBankAnnotationFile,
+  parseAnnotationFile,
 } from './file-annotations.ts';
 import type { GenomeAnnotations } from './index.ts';
 
@@ -41,9 +41,9 @@ describe('mergeAnnotationMaps', () => {
   });
 });
 
-describe('parseGenBankAnnotationFile', () => {
+describe('parseAnnotationFile', () => {
   it('parses annotations for a specific genome index', () => {
-    const parsed = parseGenBankAnnotationFile(SIMPLE_GBK, 3);
+    const parsed = parseAnnotationFile(SIMPLE_GBK, 3, 'genbank');
     expect(parsed.genomeIndex).toBe(3);
     expect(parsed.features.length).toBeGreaterThan(0);
   });
@@ -55,7 +55,7 @@ describe('loadAnnotationFiles', () => {
     const invalid = new File(['not a genbank'], 'b.gbk', { type: 'text/plain' });
 
     const merged = await loadAnnotationFiles([valid, invalid], new Map());
-    expect(merged.get(0)?.features.length).toBeGreaterThan(0);
-    expect(merged.get(1)?.features).toEqual([]);
+    expect(merged.get(1)?.features.length).toBeGreaterThan(0);
+    expect(merged.get(2)?.features).toEqual([]);
   });
 });
