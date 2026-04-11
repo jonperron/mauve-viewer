@@ -1,0 +1,7 @@
+node_modules
+dist
+coverage
+mauve
+mauve-viewer-legacy
+.git
+*.md
