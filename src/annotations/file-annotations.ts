@@ -1,5 +1,8 @@
 import { parseGenBankMulti } from './index.ts';
+import { parseEmblMulti } from '../embl/index.ts';
+import { parseInsdseqMulti } from '../insdseq/index.ts';
 import type { GenomeAnnotations } from './index.ts';
+import type { FileFormat } from '../format-detection/index.ts';
 import type { AnnotationMap } from '../viewer/annotations.ts';
 
 function readFileAsText(file: File): Promise<string> {
@@ -38,11 +41,21 @@ export function buildAnnotationMap(
   return annotations;
 }
 
-export function parseGenBankAnnotationFile(
+export function parseAnnotationFile(
   content: string,
   genomeIndex: number,
+  format: FileFormat,
 ): GenomeAnnotations {
-  const parsed = parseGenBankMulti(content);
+  const parsed = format === 'genbank'
+    ? parseGenBankMulti(content)
+    : format === 'embl'
+      ? parseEmblMulti(content)
+      : format === 'xml'
+        ? parseInsdseqMulti(content)
+        : (() => {
+          throw new Error(`Unsupported annotation format: ${format}`);
+        })();
+
   return {
     genomeIndex,
     features: parsed.flatMap((p) => p.features),
@@ -55,10 +68,16 @@ export async function loadAnnotationFiles(
   initialAnnotations: AnnotationMap,
 ): Promise<AnnotationMap> {
   const tasks = annotationFiles.map(async (file, index) => {
-    const genomeIndex = index;
+    const genomeIndex = index + 1;
     try {
       const content = await readFileAsText(file);
-      const parsed = parseGenBankAnnotationFile(content, genomeIndex);
+      const ext = file.name.toLowerCase();
+      const format: FileFormat = ext.endsWith('.embl')
+        ? 'embl'
+        : ext.endsWith('.xml') || ext.endsWith('.insdc')
+          ? 'xml'
+          : 'genbank';
+      const parsed = parseAnnotationFile(content, genomeIndex, format);
       return { genomeIndex, parsed };
     } catch {
       // Skip files that fail to read or parse.

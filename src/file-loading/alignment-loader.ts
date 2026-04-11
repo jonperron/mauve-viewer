@@ -5,6 +5,7 @@ import {
 import { detectFormat } from '../format-detection/index.ts';
 import type { FileFormat } from '../format-detection/index.ts';
 import { parseJsonLcbs } from '../json-lcbs/index.ts';
+import { parseMauveAsXmfa } from '../mauve-format/index.ts';
 import { enrichJsonGenomeNames } from '../services/patric-genome-labels.ts';
 import { renderAlignment } from '../viewer/alignment-viewer.ts';
 import type { ViewerHandle } from '../viewer/alignment-viewer.ts';
@@ -14,8 +15,8 @@ import type { XmfaAlignment } from '../xmfa/types.ts';
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
 
-const ALIGNMENT_FORMATS: ReadonlySet<FileFormat> = new Set(['xmfa', 'json']);
-const ANNOTATION_FORMATS: ReadonlySet<FileFormat> = new Set(['genbank']);
+const ALIGNMENT_FORMATS: ReadonlySet<FileFormat> = new Set(['xmfa', 'json', 'mauve']);
+const ANNOTATION_FORMATS: ReadonlySet<FileFormat> = new Set(['genbank', 'embl', 'xml']);
 
 function readFileAsText(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -45,13 +46,23 @@ function parseFileContent(
       return parseXmfa(content);
     case 'json':
       return parseJsonLcbs(content);
+    case 'mauve':
+      return parseMauveAsXmfa(content, filename.toLowerCase().endsWith('.mln') ? 'mln' : 'mauve').xmfa;
     case 'genbank':
       throw new Error(
-        'GenBank files contain annotations only. Load an XMFA or JSON alignment file first, then load GenBank files as annotations.',
+        'GenBank files contain annotations only. Load an XMFA, JSON, or Mauve alignment file first, then load annotation files.',
+      );
+    case 'embl':
+      throw new Error(
+        'EMBL files contain annotations only. Load an XMFA, JSON, or Mauve alignment file first, then load annotation files.',
+      );
+    case 'xml':
+      throw new Error(
+        'INSDseq XML files contain annotations only. Load an XMFA, JSON, or Mauve alignment file first, then load annotation files.',
       );
     default:
       throw new Error(
-        `Unsupported file format: ${format} (${filename}). Supported formats: XMFA, JSON.`,
+        `Unsupported file format: ${format} (${filename}). Supported alignment formats: XMFA, JSON, Mauve (.mauve/.mln).`,
       );
   }
 }
@@ -87,7 +98,7 @@ function partitionInputFiles(files: readonly File[]): {
       alignmentFiles,
       annotationFiles,
       error:
-        'GenBank files contain annotations only. Load an XMFA or JSON alignment file together with annotation files.',
+        'Annotation files loaded without alignment. Load an XMFA, JSON, or Mauve alignment file together with GenBank/EMBL/INSDseq annotation files.',
     };
   }
 

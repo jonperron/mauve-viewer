@@ -7,6 +7,11 @@ describe('detectFormat', () => {
     expect(detectFormat('data.alignment')).toBe('xmfa');
   });
 
+  it('detects Mauve compact format', () => {
+    expect(detectFormat('anchors.mauve')).toBe('mauve');
+    expect(detectFormat('anchors.mln')).toBe('mauve');
+  });
+
   it('detects GenBank format', () => {
     expect(detectFormat('genome.gbk')).toBe('genbank');
     expect(detectFormat('genome.gb')).toBe('genbank');
@@ -34,11 +39,12 @@ describe('detectFormat', () => {
 
   it('detects XML format', () => {
     expect(detectFormat('sequences.xml')).toBe('xml');
+    expect(detectFormat('sequences.insdc')).toBe('xml');
   });
 
   it('defaults to FASTA for unrecognized extensions', () => {
     expect(detectFormat('file.txt')).toBe('fasta');
-    expect(detectFormat('file.dat')).toBe('fasta');
+    expect(detectFormat('file.weird')).toBe('fasta');
     expect(detectFormat('file.seq')).toBe('fasta');
   });
 

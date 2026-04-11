@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { renderAlignment, getGenomeLabel } from './alignment-viewer.ts';
+import { renderAlignment, getGenomeLabel, getGenomeLabelWithOrganism } from './alignment-viewer.ts';
 import type { ViewerHandle } from './alignment-viewer.ts';
 import type { XmfaAlignment } from '../xmfa/types.ts';
 
@@ -402,5 +402,30 @@ describe('getGenomeLabel', () => {
 
   it('does not strip generic bracket suffixes that are not genome ids', () => {
     expect(getGenomeLabel('Sample [draft]', false)).toBe('Sample [draft]');
+  });
+});
+
+describe('getGenomeLabelWithOrganism', () => {
+  it('falls back to filename when no label provided', () => {
+    expect(getGenomeLabelWithOrganism('genome1.fasta', true, undefined)).toBe('genome1.fasta');
+    expect(getGenomeLabelWithOrganism('genome1.fasta', false, undefined)).toBe('genome1');
+  });
+
+  it('returns organism name only when showGenomeId is false', () => {
+    expect(getGenomeLabelWithOrganism('520456.3.fna', false, 'Brucella suis 1330')).toBe(
+      'Brucella suis 1330',
+    );
+  });
+
+  it('returns "organism [id]" format when showGenomeId is true', () => {
+    expect(getGenomeLabelWithOrganism('520456.3.fna', true, 'Brucella suis 1330')).toBe(
+      'Brucella suis 1330 [520456.3]',
+    );
+  });
+
+  it('uses full name as id when filename has no extension', () => {
+    expect(getGenomeLabelWithOrganism('520456', true, 'Brucella suis 1330')).toBe(
+      'Brucella suis 1330 [520456]',
+    );
   });
 });
