@@ -391,4 +391,16 @@ describe('getGenomeLabel', () => {
   it('returns full name if no extension', () => {
     expect(getGenomeLabel('genome_no_ext', false)).toBe('genome_no_ext');
   });
+
+  it('returns organism name for enriched labels when genome id display is off', () => {
+    expect(getGenomeLabel('Brucella suis [520456.3]', false)).toBe('Brucella suis');
+  });
+
+  it('returns full enriched label when genome id display is on', () => {
+    expect(getGenomeLabel('Brucella suis [520456.3]', true)).toBe('Brucella suis [520456.3]');
+  });
+
+  it('does not strip generic bracket suffixes that are not genome ids', () => {
+    expect(getGenomeLabel('Sample [draft]', false)).toBe('Sample [draft]');
+  });
 });

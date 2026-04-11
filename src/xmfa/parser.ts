@@ -212,6 +212,32 @@ function extractFilename(filepath: string): string {
   return parts[parts.length - 1] ?? filepath;
 }
 
+function isGenericGenomePlaceholder(name: string): boolean {
+  const normalized = name.trim().toLowerCase();
+  return normalized === 'fasta'
+    || normalized === 'fa'
+    || normalized === 'fna'
+    || normalized === 'gb'
+    || normalized === 'gbk'
+    || normalized === 'genbank';
+}
+
+function getSourceFilenameForSequence(
+  blocks: readonly AlignmentBlock[],
+  sequenceIndex: number,
+): string | undefined {
+  for (const block of blocks) {
+    for (const segment of block.segments) {
+      if (segment.sequenceIndex !== sequenceIndex) continue;
+      const source = extractFilename(segment.sourceFile);
+      if (source.trim().length > 0) {
+        return source;
+      }
+    }
+  }
+  return undefined;
+}
+
 function buildGenomes(
   header: XmfaHeader,
   blocks: readonly AlignmentBlock[],
@@ -227,12 +253,20 @@ function buildGenomes(
     }
   }
 
-  return header.sequenceEntries.map((entry) => ({
-    index: entry.index,
-    name: extractFilename(entry.file),
-    length: maxEnd.get(entry.index) ?? 0,
-    format: entry.format,
-  }));
+  return header.sequenceEntries.map((entry) => {
+    const headerName = extractFilename(entry.file);
+    const fallbackName = getSourceFilenameForSequence(blocks, entry.index);
+    const selectedName = isGenericGenomePlaceholder(headerName) && fallbackName
+      ? fallbackName
+      : headerName;
+
+    return {
+      index: entry.index,
+      name: selectedName,
+      length: maxEnd.get(entry.index) ?? 0,
+      format: entry.format,
+    };
+  });
 }
 
 export function parseXmfa(content: string): XmfaAlignment {

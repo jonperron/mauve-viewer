@@ -99,6 +99,13 @@ function computeTotalHeight(
 /** Get a genome display label. With genome ID, shows the full filename; without, strips the extension. */
 export function getGenomeLabel(name: string, showGenomeId: boolean): string {
   if (showGenomeId) return name;
+
+  // Legacy-compatible enriched label format: "Organism Name [genome_id]"
+  const enrichedMatch = name.match(/^(.*)\s\[(\d+\.\d+)\]$/);
+  if (enrichedMatch && enrichedMatch[1]) {
+    return enrichedMatch[1];
+  }
+
   const dotIndex = name.lastIndexOf('.');
   return dotIndex > 0 ? name.slice(0, dotIndex) : name;
 }

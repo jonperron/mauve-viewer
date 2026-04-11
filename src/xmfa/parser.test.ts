@@ -57,6 +57,35 @@ ACGT
 =
 `;
 
+const GENERIC_SEQUENCE_FILE_NAME = `#FormatVersion Mauve1
+#Sequence1File	fasta
+#Sequence1Format	FastA
+#Sequence2File	genbank
+#Sequence2Format	GenBank
+> 1:100-200 + Brucella suis 1330.fasta
+ACGT
+> 2:50-150 + Brucella abortus 9-941.gbk
+ACGT
+=
+`;
+
+const GENERIC_WITHOUT_BLOCKS = `#FormatVersion Mauve1
+#Sequence1File	fasta
+#Sequence1Format	FastA
+`;
+
+const NON_GENERIC_HEADER_NAME = `#FormatVersion Mauve1
+#Sequence1File	genome1.fasta
+#Sequence1Format	FastA
+#Sequence2File	genome2.gbk
+#Sequence2Format	GenBank
+> 1:100-200 + Brucella suis 1330.fasta
+ACGT
+> 2:50-150 + Brucella abortus 9-941.gbk
+ACGT
+=
+`;
+
 describe('parseXmfa', () => {
   describe('header parsing', () => {
     it('should parse format version', () => {
@@ -213,6 +242,23 @@ CC
       const result = parseXmfa(TWO_BLOCK_XMFA);
       expect(result.genomes[0]!.length).toBe(400);
       expect(result.genomes[1]!.length).toBe(300);
+    });
+
+    it('should fall back to defline source file when SequenceFile is generic', () => {
+      const result = parseXmfa(GENERIC_SEQUENCE_FILE_NAME);
+      expect(result.genomes[0]!.name).toBe('Brucella suis 1330.fasta');
+      expect(result.genomes[1]!.name).toBe('Brucella abortus 9-941.gbk');
+    });
+
+    it('should keep header name when SequenceFile is not generic', () => {
+      const result = parseXmfa(NON_GENERIC_HEADER_NAME);
+      expect(result.genomes[0]!.name).toBe('genome1.fasta');
+      expect(result.genomes[1]!.name).toBe('genome2.gbk');
+    });
+
+    it('should keep generic header name when no block source fallback exists', () => {
+      const result = parseXmfa(GENERIC_WITHOUT_BLOCKS);
+      expect(result.genomes[0]!.name).toBe('fasta');
     });
   });
 
