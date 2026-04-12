@@ -96,7 +96,7 @@ export function createNavigationToolbar(
     toolbar.appendChild(select);
   }
 
-  container.insertBefore(toolbar, container.firstChild);
+  container.appendChild(toolbar);
 
   return {
     element: toolbar,

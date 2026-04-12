@@ -41,6 +41,7 @@ import type { RegionSelectionHandle } from './region-selection.ts';
 import { setupExportShortcut, createImageExportDialog } from './image-export.ts';
 import { setupPrintSupport, printAlignment } from './print-support.ts';
 import { setupNavigatorShortcut } from './sequence-navigator.ts';
+import { createShortcutsHelp } from './shortcuts-help.ts';
 import { renderUngappedMatches, updateUngappedMatchesOnZoom } from './ungapped-match-renderer.ts';
 import { renderSimilarityProfiles, updateSimilarityProfilesOnZoom } from './similarity-profile-renderer.ts';
 import type { SimilarityProfileData } from './similarity-profile-renderer.ts';
@@ -256,6 +257,8 @@ export function renderAlignment(
   controlsBar.className = 'viewer-controls-bar';
   container.insertBefore(controlsBar, container.firstChild);
 
+  const shortcutsHelpHandle = createShortcutsHelp(controlsBar);
+
   const toolbarHandle = createNavigationToolbar(controlsBar, {
     onZoomIn: () => zoomHandle.zoomIn(),
     onZoomOut: () => zoomHandle.zoomOut(),
@@ -375,6 +378,20 @@ export function renderAlignment(
     }
   }
 
+  const availableSchemes = getAvailableSchemes(alignment, backbone);
+  const colorSchemeMenuHandle = createColorSchemeMenu(
+    controlsBar,
+    availableSchemes,
+    currentSchemeId,
+    {
+      onSchemeChange: (schemeId) => {
+        currentSchemeId = schemeId;
+        colors = applyColorScheme(schemeId, alignment, backbone);
+        rerenderPanels();
+      },
+    },
+  );
+
   const optionsPanelHandle = createOptionsPanel(controlsBar, {
     onToggleGenomeId: (enabled) => {
       optionsState = { ...optionsState, showGenomeId: enabled };
@@ -411,20 +428,6 @@ export function renderAlignment(
       printAlignment(svgNode);
     },
   });
-
-  const availableSchemes = getAvailableSchemes(alignment, backbone);
-  const colorSchemeMenuHandle = createColorSchemeMenu(
-    controlsBar,
-    availableSchemes,
-    currentSchemeId,
-    {
-      onSchemeChange: (schemeId) => {
-        currentSchemeId = schemeId;
-        colors = applyColorScheme(schemeId, alignment, backbone);
-        rerenderPanels();
-      },
-    },
-  );
 
   // Image export shortcut (Ctrl+E)
   const cleanupExport = setupExportShortcut(svgNode, () => container);
@@ -465,6 +468,7 @@ export function renderAlignment(
       cleanupNavigator?.();
       cleanupPrint();
       cleanupExport();
+      shortcutsHelpHandle.destroy();
       regionSelectionHandle.destroy();
       annotationsHandle?.destroy();
       tooltipHandle?.destroy();

@@ -134,7 +134,7 @@ export function createOptionsPanel(
   };
   document.addEventListener('click', onDocumentClick);
 
-  container.insertBefore(panel, container.firstChild);
+  container.appendChild(panel);
 
   return {
     element: panel,
