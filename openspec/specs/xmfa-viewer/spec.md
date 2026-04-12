@@ -262,7 +262,7 @@ The system SHALL highlight all homologous LCB blocks and their connecting trapez
 - **THEN** system returns all LCB blocks and connectors to their default appearance
 
 ### Requirement: ViewerHandle lifecycle API
-The `renderAlignment` function SHALL return a `ViewerHandle` object providing lifecycle management for the viewer. The function SHALL accept an optional `initialDisplayMode` parameter of type `DisplayMode` to set the initial display mode. The `ViewerHandle` SHALL expose: a `destroy()` method that removes all event listeners and cleans up zoom, cursor, toolbar, track controls, options panel, color scheme menu, region selection, annotations, feature tooltip, image export, print support, and sequence navigator behaviors; a `getState()` method returning the current immutable `ViewerState`; the `svg` element reference; the `zoomHandle` for programmatic zoom/pan control (with `zoomIn()`, `zoomOut()`, `panLeft()`, `panRight()`, `reset()` methods); the `cursorHandle` for cursor behavior management; the `toolbarHandle` for navigation toolbar lifecycle management; the `trackControlsHandle` for track controls sidebar lifecycle management; the `optionsPanelHandle` for options panel lifecycle management; the `colorSchemeMenuHandle` for color scheme menu lifecycle management; the `regionSelectionHandle` for region selection lifecycle management; and the `annotationsHandle` for annotation rendering lifecycle management (if annotations are provided). The `renderAlignment` function SHALL accept an optional `AnnotationMap` parameter. On file reload, the caller SHALL call `destroy()` on the previous handle before creating a new viewer.
+The `renderAlignment` function SHALL return a `ViewerHandle` object providing lifecycle management for the viewer. The function SHALL accept an optional `initialDisplayMode` parameter of type `DisplayMode` to set the initial display mode. The `ViewerHandle` SHALL expose: a `destroy()` method that removes all event listeners and cleans up zoom, cursor, toolbar, track controls, options panel, color scheme menu, shortcuts help, region selection, annotations, feature tooltip, image export, print support, and sequence navigator behaviors; a `getState()` method returning the current immutable `ViewerState`; the `svg` element reference; the `zoomHandle` for programmatic zoom/pan control (with `zoomIn()`, `zoomOut()`, `panLeft()`, `panRight()`, `reset()` methods); the `cursorHandle` for cursor behavior management; the `toolbarHandle` for navigation toolbar lifecycle management; the `trackControlsHandle` for track controls sidebar lifecycle management; the `optionsPanelHandle` for options panel lifecycle management; the `colorSchemeMenuHandle` for color scheme menu lifecycle management; the `regionSelectionHandle` for region selection lifecycle management; and the `annotationsHandle` for annotation rendering lifecycle management (if annotations are provided). The `renderAlignment` function SHALL accept an optional `AnnotationMap` parameter. On file reload, the caller SHALL call `destroy()` on the previous handle before creating a new viewer.
 
 #### Scenario: Obtain viewer handle
 - **WHEN** `renderAlignment` is called with a container element and alignment data
@@ -270,7 +270,7 @@ The `renderAlignment` function SHALL return a `ViewerHandle` object providing li
 
 #### Scenario: Destroy viewer on reload
 - **WHEN** a new alignment file is loaded while a viewer is already active
-- **THEN** the caller invokes `destroy()` on the existing `ViewerHandle` before rendering the new alignment, removing all event listeners, D3 behaviors, toolbar elements, track controls, options panel, color scheme menu, region selection, annotations, feature tooltips, image export shortcut, print support, and sequence navigator
+- **THEN** the caller invokes `destroy()` on the existing `ViewerHandle` before rendering the new alignment, removing all event listeners, D3 behaviors, toolbar elements, track controls, options panel, color scheme menu, shortcuts help, region selection, annotations, feature tooltips, image export shortcut, print support, and sequence navigator
 
 #### Scenario: Access current state with display mode
 - **WHEN** `getState()` is called on the `ViewerHandle`
@@ -300,7 +300,7 @@ The system SHALL map positions across genomes using LCB-relative fractional offs
 - **THEN** the system returns an empty array of homologous positions
 
 ### Requirement: Navigation toolbar
-The system SHALL display a navigation toolbar in a controls bar above the alignment SVG, alongside the Options Panel. The controls bar SHALL contain the options panel and the navigation toolbar on a single horizontal line. The toolbar SHALL contain five buttons: Reset, Pan Left, Zoom In, Zoom Out, and Pan Right. Each button SHALL invoke the corresponding `ZoomHandle` method (`reset()`, `panLeft()`, `zoomIn()`, `zoomOut()`, `panRight()`). The toolbar SHALL use a `<div>` with `role="toolbar"` and `aria-label="Navigation controls"`. Each button SHALL have a descriptive `aria-label` attribute and a `title` tooltip that includes the keyboard shortcut hint (e.g., "Zoom in (Ctrl+Up)"). The controls bar SHALL be inserted as the first child of the viewer container element. The toolbar SHALL be removed from the DOM when `destroy()` is called on the `NavigationToolbarHandle`. When multiple display modes are available, the toolbar SHALL include a display mode selector dropdown: a `<select>` element with class `display-mode-selector`, `aria-label="Display mode"`, and `title="Display mode"`. The dropdown SHALL only be rendered when more than one display mode is available. Options SHALL use labels: "LCB Display" for `lcb`, "Ungapped Matches" for `ungapped-match`, "Similarity Profile" for `similarity-profile`. Selecting a mode SHALL invoke `onDisplayModeChange` on `NavigationCallbacks` with type-safe validation via `isDisplayMode()`.
+The system SHALL display a navigation toolbar in a controls bar above the alignment SVG. The controls bar SHALL arrange its children in the following order: shortcuts help button, navigation toolbar, color scheme menu, and options panel, displayed on a single horizontal line using flexbox layout. The toolbar SHALL contain five buttons: Reset, Pan Left, Zoom In, Zoom Out, and Pan Right. Each button SHALL invoke the corresponding `ZoomHandle` method (`reset()`, `panLeft()`, `zoomIn()`, `zoomOut()`, `panRight()`). The toolbar SHALL use a `<div>` with `role="toolbar"` and `aria-label="Navigation controls"`. Each button SHALL have a descriptive `aria-label` attribute and a `title` tooltip that includes the keyboard shortcut hint (e.g., "Zoom in (Ctrl+Up)"). The controls bar SHALL be inserted as the first child of the viewer container element. The toolbar SHALL be removed from the DOM when `destroy()` is called on the `NavigationToolbarHandle`. When multiple display modes are available, the toolbar SHALL include a display mode selector dropdown: a `<select>` element with class `display-mode-selector`, `aria-label="Display mode"`, and `title="Display mode"`. The dropdown SHALL only be rendered when more than one display mode is available. Options SHALL use labels: "LCB Display" for `lcb`, "Ungapped Matches" for `ungapped-match`, "Similarity Profile" for `similarity-profile`. Selecting a mode SHALL invoke `onDisplayModeChange` on `NavigationCallbacks` with type-safe validation via `isDisplayMode()`.
 
 **Module**: `src/viewer/navigation-toolbar.ts`
 
@@ -387,11 +387,11 @@ The `renderAlignment` function SHALL return a `ViewerHandle` that includes a `tr
 - **THEN** `trackControlsHandle.destroy()` is invoked, removing the sidebar from the DOM
 
 ### Requirement: Options panel
-The system SHALL display an Options Panel in a controls bar above the alignment SVG. The Options Panel SHALL contain a toggle button labeled "Options" with `aria-label="Toggle options panel"`. Clicking the toggle button SHALL show or hide a dropdown containing four checkboxes: "Show Genome ID", "LCB Connecting Lines", "Show Features (zoomed)", and "Show Contigs". All checkboxes SHALL default to checked (enabled). When `onExportImage` or `onPrint` callbacks are provided, the dropdown SHALL include a horizontal rule separator followed by action buttons: an "Export Image (Ctrl+E)" button (if `onExportImage` is provided) and a "Print (Ctrl+P)" button (if `onPrint` is provided). Clicking an action button SHALL close the dropdown and invoke the corresponding callback. Clicking outside the panel SHALL close the dropdown. The controls bar SHALL group the Options Panel and the navigation toolbar on a single horizontal line using flexbox layout.
+The system SHALL display an Options Panel in a controls bar above the alignment SVG. The Options Panel SHALL contain a toggle button labeled "Options" with `aria-label="Toggle options panel"`. Clicking the toggle button SHALL show or hide a dropdown containing four checkboxes: "Show Genome ID", "LCB Connecting Lines", "Show Features (zoomed)", and "Show Contigs". All checkboxes SHALL default to checked (enabled). When `onExportImage` or `onPrint` callbacks are provided, the dropdown SHALL include a horizontal rule separator followed by action buttons: an "Export Image (Ctrl+E)" button (if `onExportImage` is provided) and a "Print (Ctrl+P)" button (if `onPrint` is provided). Clicking an action button SHALL close the dropdown and invoke the corresponding callback. Clicking outside the panel SHALL close the dropdown. The controls bar SHALL arrange its children in the following order: shortcuts help button, navigation toolbar, color scheme menu, and options panel, displayed on a single horizontal line using flexbox layout.
 
 #### Scenario: Display options panel
 - **WHEN** `renderAlignment` is called with a container element and alignment data
-- **THEN** system inserts a controls bar above the SVG containing an "Options" toggle button and the navigation toolbar
+- **THEN** system inserts a controls bar above the SVG containing an "Options" toggle button alongside the shortcuts help button, navigation toolbar, and color scheme menu
 
 #### Scenario: Open options dropdown
 - **WHEN** user clicks the "Options" toggle button
@@ -546,4 +546,33 @@ The system SHALL compute and display unaligned genomic regions — regions not c
 #### Scenario: No unaligned regions when fully covered
 - **WHEN** all positions in a genome are covered by LCBs with no gaps
 - **THEN** no unaligned region blocks are rendered
+
+### Requirement: Keyboard shortcuts help panel
+The system SHALL display a keyboard shortcuts help panel in the controls bar above the alignment SVG. The help panel SHALL consist of a circular "?" button (`aria-label="Keyboard shortcuts"`, `title="Keyboard shortcuts (?)"`) and a toggleable floating box listing all keyboard shortcuts. The shortcuts list SHALL be rendered as a definition list (`<dl>`) with each shortcut showing key bindings in `<kbd>` elements and a description. The listed shortcuts SHALL include: Ctrl+Up (Zoom in), Ctrl+Down (Zoom out), Ctrl+Left (Pan left), Ctrl+Right (Pan right), Ctrl+Shift+Left/Right (Pan faster), Ctrl+E (Export image), Ctrl+P (Print), Ctrl+I (Sequence navigator), Escape (Close dialog / clear selection), and ? (Toggle this help). Pressing the "?" key (without Ctrl, Alt, or Meta modifiers) SHALL toggle the help box visibility. The "?" keydown handler SHALL be ignored when the active element is an INPUT, TEXTAREA, or SELECT to avoid interfering with form input. Clicking outside the shortcuts help wrapper SHALL close the help box. The `ShortcutsHelpHandle.destroy()` method SHALL remove the keydown and click event listeners and remove the wrapper element from the DOM. The shortcuts help button SHALL be the first element appended to the controls bar.
+
+**Module**: `src/viewer/shortcuts-help.ts`
+
+#### Scenario: Display shortcuts help button
+- **WHEN** `renderAlignment` is called with a container element and alignment data
+- **THEN** the controls bar contains a circular "?" button with `aria-label="Keyboard shortcuts"` as its first element
+
+#### Scenario: Toggle help panel via button click
+- **WHEN** user clicks the "?" button
+- **THEN** system toggles the visibility of the shortcuts help box listing all keyboard shortcuts
+
+#### Scenario: Toggle help panel via "?" key
+- **WHEN** user presses the "?" key without Ctrl, Alt, or Meta modifiers and focus is not on a form element
+- **THEN** system toggles the visibility of the shortcuts help box
+
+#### Scenario: "?" key ignored in form elements
+- **WHEN** user presses the "?" key while focus is on an INPUT, TEXTAREA, or SELECT element
+- **THEN** system does not toggle the shortcuts help box
+
+#### Scenario: Close help panel on outside click
+- **WHEN** the shortcuts help box is visible and user clicks outside the shortcuts help wrapper
+- **THEN** system closes the shortcuts help box
+
+#### Scenario: Shortcuts help cleanup on destroy
+- **WHEN** `destroy()` is called on the `ShortcutsHelpHandle`
+- **THEN** system removes the keydown and click document event listeners and removes the wrapper element from the DOM
 
