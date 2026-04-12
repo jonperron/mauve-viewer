@@ -1,3 +1,4 @@
+import type { BackboneSegment } from '../backbone/types.ts';
 import type { Lcb, XmfaAlignment } from '../xmfa/types.ts';
 
 /** HSB constants matching the Java Mauve color scheme (ColorScheme.java) */
@@ -10,6 +11,20 @@ const BUMP_SIZE = 1 / 6;
 
 /** Maximum number of sequences for bitmask-based multiplicity type schemes */
 const MAX_MULTIPLICITY_TYPE_SEQUENCES = 62;
+
+/** Mauve color for backbone regions conserved among all genomes */
+const MAUVE_COLOR = '#9370DB';
+
+/** HSB cylindrical space parameters for maximally distinct color generation (BackboneMultiplicityColor.java) */
+const BMC_HUE_MAX = 1;
+const BMC_HUE_WEIGHT = 10;
+const BMC_SAT_MIN = 0.7;
+const BMC_SAT_MAX = 1;
+const BMC_BRIGHT_MIN = 0.5;
+const BMC_BRIGHT_MAX = 1;
+const BMC_HUE_LEVELS = 12;
+const BMC_SAT_LEVELS = 2;
+const BMC_BRIGHT_LEVELS = 3;
 
 /** Color scheme identifier */
 export type ColorSchemeId =
@@ -26,7 +41,8 @@ export type ColorSchemeId =
 export interface ColorScheme {
   readonly id: ColorSchemeId;
   readonly label: string;
-  readonly apply: (alignment: XmfaAlignment) => readonly string[];
+  readonly requiresBackbone?: boolean;
+  readonly apply: (alignment: XmfaAlignment, backbone?: readonly BackboneSegment[]) => readonly string[];
 }
 
 /** Convert HSB (hue 0-1, saturation 0-1, brightness 0-1) to hex color string */
@@ -256,6 +272,138 @@ function applyNormalizedMultiplicityTypeColorScheme(alignment: XmfaAlignment): r
   return colors;
 }
 
+/**
+ * Generate maximally distinct colors using HSB cylindrical space partitioning.
+ * Ported from BackboneMultiplicityColor.getColors() in Java Mauve.
+ */
+export function generateDistinctColors(count: number): readonly string[] {
+  const maxCols = Math.min(count, BMC_HUE_LEVELS * BMC_SAT_LEVELS * BMC_BRIGHT_LEVELS);
+  if (maxCols <= 0) return [];
+
+  const sliceArea = (Math.PI * BMC_SAT_MAX * BMC_SAT_MAX) - (Math.PI * BMC_SAT_MIN * BMC_SAT_MIN);
+  const volume = (BMC_BRIGHT_MAX - BMC_BRIGHT_MIN) * sliceArea * BMC_HUE_WEIGHT;
+  const cubeSize = volume / maxCols;
+  const step = Math.pow(cubeSize, 1 / 3);
+
+  let hSteps = Math.ceil((BMC_HUE_MAX * BMC_HUE_WEIGHT) / step);
+  const sSteps = Math.ceil((BMC_SAT_MAX - BMC_SAT_MIN) / step);
+  const bSteps = Math.ceil((BMC_BRIGHT_MAX - BMC_BRIGHT_MIN) / step);
+
+  while (hSteps * (sSteps + 1) * (bSteps + 1) < maxCols) {
+    hSteps++;
+  }
+
+  const sStep = (BMC_SAT_MAX - BMC_SAT_MIN) / sSteps;
+  const bStep = (BMC_BRIGHT_MAX - BMC_BRIGHT_MIN) / bSteps;
+  const hStep = BMC_HUE_MAX / hSteps;
+
+  const colors: string[] = [];
+  let h = 0;
+
+  for (let sI = 0; sI <= sSteps; sI++) {
+    for (let bI = 0; bI <= bSteps; bI++) {
+      for (let hI = 0; hI < hSteps; hI++) {
+        colors.push(hsbToHex(h, sStep * sI + BMC_SAT_MIN, bStep * bI + BMC_BRIGHT_MIN));
+        h += hStep;
+        if (colors.length === maxCols) return colors;
+      }
+    }
+  }
+
+  return colors;
+}
+
+/**
+ * Backbone LCB color scheme: backbone regions (all genomes present) in mauve,
+ * subset-conserved regions in multiplicity type colors.
+ * Requires backbone data.
+ *
+ * Note: intentional divergence from Java BackboneLcbColor which propagates
+ * LCB colors to backbone segments. This version follows the spec: mauve for
+ * backbone, multiplicity type colors for non-backbone.
+ */
+function applyBackboneLcbColorScheme(
+  alignment: XmfaAlignment,
+  backbone?: readonly BackboneSegment[],
+): readonly string[] {
+  const { lcbs } = alignment;
+  if (lcbs.length === 0 || !backbone || backbone.length === 0) return [];
+
+  const backboneMap = new Map<number, boolean>();
+  for (const segment of backbone) {
+    backboneMap.set(segment.seqIndex, segment.isBackbone);
+  }
+
+  const multTypeColors = applyMultiplicityTypeColorScheme(alignment);
+
+  return lcbs.map((lcb, i) => {
+    if (backboneMap.get(lcb.id) === true) {
+      return MAUVE_COLOR;
+    }
+    return multTypeColors[i] ?? MAUVE_COLOR;
+  });
+}
+
+/**
+ * Backbone multiplicity color scheme: assigns maximally distinct colors
+ * based on the exact genome presence/absence bitmask pattern.
+ * N-way backbone (all genomes) always gets mauve color.
+ * Ported from BackboneMultiplicityColor.java.
+ */
+function applyBackboneMultiplicityColorScheme(
+  alignment: XmfaAlignment,
+  backbone?: readonly BackboneSegment[],
+): readonly string[] {
+  const { lcbs, genomes } = alignment;
+  if (lcbs.length === 0 || !backbone || backbone.length === 0) return [];
+
+  const genomeCount = genomes.length;
+  const lcbMasks = lcbs.map(lcb => getMultiplicityType(lcb, genomeCount));
+
+  // Count nucleotides per multiplicity type pattern
+  const ntCountByMask = new Map<number, number>();
+  for (let i = 0; i < lcbs.length; i++) {
+    const mask = lcbMasks[i]!;
+    const lcb = lcbs[i]!;
+    let length = 0;
+    for (let gi = 0; gi < genomeCount; gi++) {
+      const left = lcb.left[gi] ?? 0;
+      const right = lcb.right[gi] ?? 0;
+      if (left > 0 && right > 0) {
+        length += right - left + 1;
+      }
+    }
+    ntCountByMask.set(mask, (ntCountByMask.get(mask) ?? 0) + length);
+  }
+
+  const uniqueCount = ntCountByMask.size;
+
+  // Sort by nucleotide count (ascending) so most common patterns
+  // are assigned last in the round-robin and get distinct colors
+  const sortedEntries = [...ntCountByMask.entries()].sort((a, b) => a[1] - b[1]);
+
+  const distinctColors = generateDistinctColors(uniqueCount);
+
+  // Assign colors round-robin by frequency order
+  const maskColorMap = new Map<number, string>();
+  let colorIdx = 0;
+  for (const [mask] of sortedEntries) {
+    maskColorMap.set(mask, distinctColors[colorIdx % distinctColors.length]!);
+    colorIdx++;
+  }
+
+  // Override: n-way backbone always gets mauve.
+  // Use iterative shift to match getMultiplicityType overflow behavior for 32+ genomes.
+  let nwayMask = 0;
+  for (let i = 0; i < genomeCount; i++) {
+    nwayMask <<= 1;
+    nwayMask |= 1;
+  }
+  maskColorMap.set(nwayMask, MAUVE_COLOR);
+
+  return lcbMasks.map(mask => maskColorMap.get(mask) ?? MAUVE_COLOR);
+}
+
 /** All color schemes (excluding backbone schemes which require backbone data) */
 export const COLOR_SCHEMES: readonly ColorScheme[] = [
   { id: 'lcb', label: 'LCB', apply: applyLcbColorScheme },
@@ -266,8 +414,17 @@ export const COLOR_SCHEMES: readonly ColorScheme[] = [
   { id: 'normalized-multiplicity-type', label: 'Normalized Multiplicity Type', apply: applyNormalizedMultiplicityTypeColorScheme },
 ];
 
+/** Backbone color schemes (require backbone data to be available) */
+export const BACKBONE_COLOR_SCHEMES: readonly ColorScheme[] = [
+  { id: 'backbone-lcb', label: 'Backbone LCB', requiresBackbone: true, apply: applyBackboneLcbColorScheme },
+  { id: 'backbone-multiplicity', label: 'Backbone Multiplicity', requiresBackbone: true, apply: applyBackboneMultiplicityColorScheme },
+];
+
 /** Get available color schemes for the given alignment */
-export function getAvailableSchemes(alignment: XmfaAlignment): readonly ColorScheme[] {
+export function getAvailableSchemes(
+  alignment: XmfaAlignment,
+  backbone?: readonly BackboneSegment[],
+): readonly ColorScheme[] {
   const schemes: ColorScheme[] = COLOR_SCHEMES.filter(
     s => s.id !== 'multiplicity-type' && s.id !== 'normalized-multiplicity-type',
   );
@@ -279,7 +436,9 @@ export function getAvailableSchemes(alignment: XmfaAlignment): readonly ColorSch
     if (normMultType) schemes.push(normMultType);
   }
 
-  // Backbone schemes will be added when backbone data support is implemented.
+  if (backbone && backbone.length > 0 && alignment.genomes.length <= MAX_MULTIPLICITY_TYPE_SEQUENCES) {
+    schemes.push(...BACKBONE_COLOR_SCHEMES);
+  }
 
   return schemes;
 }
@@ -288,12 +447,14 @@ export function getAvailableSchemes(alignment: XmfaAlignment): readonly ColorSch
 export function applyColorScheme(
   schemeId: ColorSchemeId,
   alignment: XmfaAlignment,
+  backbone?: readonly BackboneSegment[],
 ): readonly string[] {
-  const scheme = COLOR_SCHEMES.find(s => s.id === schemeId);
+  const allSchemes = [...COLOR_SCHEMES, ...BACKBONE_COLOR_SCHEMES];
+  const scheme = allSchemes.find(s => s.id === schemeId);
   if (!scheme) {
     throw new Error(`Unknown color scheme: ${schemeId}`);
   }
-  return scheme.apply(alignment);
+  return scheme.apply(alignment, backbone);
 }
 
 /** Default color scheme ID */

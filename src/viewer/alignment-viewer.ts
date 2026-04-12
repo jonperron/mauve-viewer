@@ -47,6 +47,8 @@ import type { SimilarityProfileData } from './similarity-profile-renderer.ts';
 import { renderUnalignedRegions, updateUnalignedRegionsOnZoom } from './unaligned-regions.ts';
 import { computeMultiLevelProfile } from '../analysis/similarity/compute.ts';
 import type { MultiLevelProfile } from '../analysis/similarity/types.ts';
+import { computeBackbone } from '../analysis/backbone/index.ts';
+import type { BackboneSegment } from '../backbone/types.ts';
 
 export interface ViewerConfig {
   readonly width: number;
@@ -147,7 +149,13 @@ export function renderAlignment(
   const { width, margin } = config;
   // Mutable color state — held in closure for color scheme callbacks (intentional exception to immutability rule)
   let currentSchemeId: ColorSchemeId = DEFAULT_COLOR_SCHEME_ID;
-  let colors = applyColorScheme(currentSchemeId, alignment);
+
+  // Compute backbone data from LCBs for backbone-dependent color schemes
+  const backbone: readonly BackboneSegment[] = lcbs.length > 0
+    ? computeBackbone(lcbs, alignment.genomes.length, { minMultiplicity: 2 })
+    : [];
+
+  let colors = applyColorScheme(currentSchemeId, alignment, backbone);
 
   // Clean up previous viewer
   d3.select(container).select('.alignment-wrapper').remove();
@@ -404,7 +412,7 @@ export function renderAlignment(
     },
   });
 
-  const availableSchemes = getAvailableSchemes(alignment);
+  const availableSchemes = getAvailableSchemes(alignment, backbone);
   const colorSchemeMenuHandle = createColorSchemeMenu(
     controlsBar,
     availableSchemes,
@@ -412,7 +420,7 @@ export function renderAlignment(
     {
       onSchemeChange: (schemeId) => {
         currentSchemeId = schemeId;
-        colors = applyColorScheme(schemeId, alignment);
+        colors = applyColorScheme(schemeId, alignment, backbone);
         rerenderPanels();
       },
     },
