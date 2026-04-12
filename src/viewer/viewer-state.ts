@@ -2,6 +2,9 @@ import * as d3 from 'd3';
 import type { XmfaAlignment, Lcb } from '../xmfa/types.ts';
 import type { ViewerConfig } from './alignment-viewer.ts';
 
+/** Display mode for the alignment viewer */
+export type DisplayMode = 'lcb' | 'ungapped-match' | 'similarity-profile';
+
 /** Immutable viewer state for zoom/pan, genome display order, and reference */
 export interface ViewerState {
   readonly alignment: XmfaAlignment;
@@ -15,6 +18,8 @@ export interface ViewerState {
   readonly referenceGenomeIndex: number;
   /** Set of data indices of hidden genomes */
   readonly hiddenGenomes: ReadonlySet<number>;
+  /** Current display mode */
+  readonly displayMode: DisplayMode;
 }
 
 /** A homologous position mapped across genomes */
@@ -28,6 +33,7 @@ export interface HomologousPosition {
 export function createViewerState(
   alignment: XmfaAlignment,
   config: ViewerConfig,
+  displayMode: DisplayMode = 'lcb',
 ): ViewerState {
   const innerWidth = config.width - config.margin.left - config.margin.right;
   const baseScales = alignment.genomes.map((genome) =>
@@ -43,7 +49,17 @@ export function createViewerState(
     genomeOrder,
     referenceGenomeIndex: 0,
     hiddenGenomes: new Set(),
+    displayMode,
   };
+}
+
+/** Set the display mode, returning an updated state */
+export function setDisplayMode(
+  state: ViewerState,
+  mode: DisplayMode,
+): ViewerState {
+  if (state.displayMode === mode) return state;
+  return { ...state, displayMode: mode };
 }
 
 /** Apply a new zoom transform, returning an updated state */

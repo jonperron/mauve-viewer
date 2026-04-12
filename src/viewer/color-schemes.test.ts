@@ -4,10 +4,13 @@ import {
   applyColorScheme,
   getAvailableSchemes,
   COLOR_SCHEMES,
+  BACKBONE_COLOR_SCHEMES,
   DEFAULT_COLOR_SCHEME_ID,
+  generateDistinctColors,
 } from './color-schemes.ts';
 import type { ColorSchemeId } from './color-schemes.ts';
 import type { XmfaAlignment, Lcb, Genome } from '../xmfa/types.ts';
+import type { BackboneSegment } from '../backbone/types.ts';
 
 function makeGenomes(count: number): readonly Genome[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -275,6 +278,45 @@ describe('getAvailableSchemes', () => {
     expect(ids).toContain('lcb');
     expect(ids).toContain('offset');
   });
+
+  it('should exclude backbone schemes when no backbone data', () => {
+    const alignment = makeAlignment(3, []);
+    const schemes = getAvailableSchemes(alignment);
+    const ids = schemes.map(s => s.id);
+    expect(ids).not.toContain('backbone-lcb');
+    expect(ids).not.toContain('backbone-multiplicity');
+  });
+
+  it('should include backbone schemes when backbone data is present', () => {
+    const lcbs = [
+      makeLcb(0, [{ left: 100, right: 200, reverse: false }, { left: 50, right: 150, reverse: false }]),
+    ];
+    const alignment = makeAlignment(2, lcbs);
+    const backbone: BackboneSegment[] = [{
+      seqIndex: 0,
+      intervals: [{ leftEnd: 100, rightEnd: 200 }, { leftEnd: 50, rightEnd: 150 }],
+      isBackbone: true,
+    }];
+    const schemes = getAvailableSchemes(alignment, backbone);
+    const ids = schemes.map(s => s.id);
+    expect(ids).toContain('backbone-lcb');
+    expect(ids).toContain('backbone-multiplicity');
+  });
+
+  it('should exclude backbone schemes for >62 genomes', () => {
+    const positions = Array.from({ length: 63 }, () => ({ left: 1, right: 2, reverse: false }));
+    const lcbs = [makeLcb(0, positions)];
+    const alignment = makeAlignment(63, lcbs);
+    const backbone: BackboneSegment[] = [{
+      seqIndex: 0,
+      intervals: Array.from({ length: 63 }, () => ({ leftEnd: 1, rightEnd: 2 })),
+      isBackbone: true,
+    }];
+    const schemes = getAvailableSchemes(alignment, backbone);
+    const ids = schemes.map(s => s.id);
+    expect(ids).not.toContain('backbone-lcb');
+    expect(ids).not.toContain('backbone-multiplicity');
+  });
 });
 
 describe('applyColorScheme', () => {
@@ -298,5 +340,158 @@ describe('COLOR_SCHEMES registry', () => {
 describe('DEFAULT_COLOR_SCHEME_ID', () => {
   it('should be lcb', () => {
     expect(DEFAULT_COLOR_SCHEME_ID).toBe('lcb');
+  });
+});
+
+describe('generateDistinctColors', () => {
+  it('should return empty array for count 0', () => {
+    expect(generateDistinctColors(0)).toEqual([]);
+  });
+
+  it('should return requested number of colors', () => {
+    const colors = generateDistinctColors(5);
+    expect(colors).toHaveLength(5);
+  });
+
+  it('should return valid hex color strings', () => {
+    const colors = generateDistinctColors(3);
+    for (const c of colors) {
+      expect(c).toMatch(/^#[0-9a-f]{6}$/);
+    }
+  });
+
+  it('should produce distinct colors', () => {
+    const colors = generateDistinctColors(10);
+    const unique = new Set(colors);
+    expect(unique.size).toBe(10);
+  });
+
+  it('should cap at HUE_LEVELS * SAT_LEVELS * BRIGHT_LEVELS = 72', () => {
+    const colors = generateDistinctColors(100);
+    expect(colors.length).toBeLessThanOrEqual(72);
+  });
+});
+
+describe('Backbone LCB color scheme', () => {
+  function makeBackbone(lcbId: number, genomeCount: number, isBackbone: boolean): BackboneSegment {
+    return {
+      seqIndex: lcbId,
+      intervals: Array.from({ length: genomeCount }, (_, gi) => ({ leftEnd: gi * 100 + 1, rightEnd: gi * 100 + 50 })),
+      isBackbone,
+    };
+  }
+
+  it('should return empty array for empty LCBs', () => {
+    const alignment = makeAlignment(2, []);
+    const colors = applyColorScheme('backbone-lcb', alignment, []);
+    expect(colors).toEqual([]);
+  });
+
+  it('should return empty array when no backbone data', () => {
+    const lcbs = [
+      makeLcb(0, [{ left: 100, right: 200, reverse: false }, { left: 50, right: 150, reverse: false }]),
+    ];
+    const alignment = makeAlignment(2, lcbs);
+    const colors = applyColorScheme('backbone-lcb', alignment);
+    expect(colors).toEqual([]);
+  });
+
+  it('should assign mauve color to backbone LCBs', () => {
+    const lcbs = [
+      makeLcb(0, [{ left: 100, right: 200, reverse: false }, { left: 50, right: 150, reverse: false }]),
+    ];
+    const alignment = makeAlignment(2, lcbs);
+    const backbone = [makeBackbone(0, 2, true)];
+    const colors = applyColorScheme('backbone-lcb', alignment, backbone);
+    expect(colors).toHaveLength(1);
+    expect(colors[0]).toBe('#9370DB');
+  });
+
+  it('should assign multiplicity type colors to non-backbone LCBs', () => {
+    const lcbs = [
+      makeLcb(0, [{ left: 100, right: 200, reverse: false }, { left: 50, right: 150, reverse: false }, { left: 10, right: 60, reverse: false }]),
+      makeLcb(1, [{ left: 300, right: 400, reverse: false }, { left: 200, right: 300, reverse: false }, { left: 0, right: 0, reverse: false }]),
+    ];
+    const alignment = makeAlignment(3, lcbs);
+    const backbone: BackboneSegment[] = [
+      makeBackbone(0, 3, true),
+      { seqIndex: 1, intervals: [{ leftEnd: 300, rightEnd: 400 }, { leftEnd: 200, rightEnd: 300 }, { leftEnd: 0, rightEnd: 0 }], isBackbone: false },
+    ];
+    const colors = applyColorScheme('backbone-lcb', alignment, backbone);
+    expect(colors).toHaveLength(2);
+    expect(colors[0]).toBe('#9370DB'); // backbone
+    expect(colors[1]).not.toBe('#9370DB'); // non-backbone
+  });
+});
+
+describe('Backbone multiplicity color scheme', () => {
+  it('should return empty array for empty LCBs', () => {
+    const alignment = makeAlignment(2, []);
+    const colors = applyColorScheme('backbone-multiplicity', alignment, []);
+    expect(colors).toEqual([]);
+  });
+
+  it('should assign mauve to n-way backbone LCBs', () => {
+    const lcbs = [
+      makeLcb(0, [{ left: 100, right: 200, reverse: false }, { left: 50, right: 150, reverse: false }]),
+    ];
+    const alignment = makeAlignment(2, lcbs);
+    const backbone: BackboneSegment[] = [{
+      seqIndex: 0,
+      intervals: [{ leftEnd: 100, rightEnd: 200 }, { leftEnd: 50, rightEnd: 150 }],
+      isBackbone: true,
+    }];
+    const colors = applyColorScheme('backbone-multiplicity', alignment, backbone);
+    expect(colors).toHaveLength(1);
+    expect(colors[0]).toBe('#9370DB');
+  });
+
+  it('should assign distinct colors to different multiplicity types', () => {
+    const lcbs = [
+      makeLcb(0, [{ left: 100, right: 200, reverse: false }, { left: 50, right: 150, reverse: false }, { left: 10, right: 60, reverse: false }]),
+      makeLcb(1, [{ left: 300, right: 400, reverse: false }, { left: 200, right: 300, reverse: false }, { left: 0, right: 0, reverse: false }]),
+      makeLcb(2, [{ left: 0, right: 0, reverse: false }, { left: 400, right: 500, reverse: false }, { left: 100, right: 200, reverse: false }]),
+    ];
+    const alignment = makeAlignment(3, lcbs);
+    const backbone: BackboneSegment[] = [
+      { seqIndex: 0, intervals: [{ leftEnd: 100, rightEnd: 200 }, { leftEnd: 50, rightEnd: 150 }, { leftEnd: 10, rightEnd: 60 }], isBackbone: true },
+      { seqIndex: 1, intervals: [{ leftEnd: 300, rightEnd: 400 }, { leftEnd: 200, rightEnd: 300 }, { leftEnd: 0, rightEnd: 0 }], isBackbone: false },
+      { seqIndex: 2, intervals: [{ leftEnd: 0, rightEnd: 0 }, { leftEnd: 400, rightEnd: 500 }, { leftEnd: 100, rightEnd: 200 }], isBackbone: false },
+    ];
+    const colors = applyColorScheme('backbone-multiplicity', alignment, backbone);
+    expect(colors).toHaveLength(3);
+    expect(colors[0]).toBe('#9370DB'); // n-way backbone
+    expect(colors[1]).not.toBe(colors[2]); // different multiplicity types
+  });
+
+  it('should assign same color to LCBs with same multiplicity type', () => {
+    const lcbs = [
+      makeLcb(0, [{ left: 100, right: 200, reverse: false }, { left: 50, right: 150, reverse: false }, { left: 0, right: 0, reverse: false }]),
+      makeLcb(1, [{ left: 300, right: 400, reverse: false }, { left: 200, right: 300, reverse: false }, { left: 0, right: 0, reverse: false }]),
+    ];
+    const alignment = makeAlignment(3, lcbs);
+    const backbone: BackboneSegment[] = [
+      { seqIndex: 0, intervals: [{ leftEnd: 100, rightEnd: 200 }, { leftEnd: 50, rightEnd: 150 }, { leftEnd: 0, rightEnd: 0 }], isBackbone: false },
+      { seqIndex: 1, intervals: [{ leftEnd: 300, rightEnd: 400 }, { leftEnd: 200, rightEnd: 300 }, { leftEnd: 0, rightEnd: 0 }], isBackbone: false },
+    ];
+    const colors = applyColorScheme('backbone-multiplicity', alignment, backbone);
+    expect(colors[0]).toBe(colors[1]); // same multiplicity type pattern
+  });
+});
+
+describe('BACKBONE_COLOR_SCHEMES registry', () => {
+  it('should contain 2 schemes', () => {
+    expect(BACKBONE_COLOR_SCHEMES).toHaveLength(2);
+  });
+
+  it('should have unique IDs', () => {
+    const ids = BACKBONE_COLOR_SCHEMES.map(s => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('should all require backbone', () => {
+    for (const scheme of BACKBONE_COLOR_SCHEMES) {
+      expect(scheme.requiresBackbone).toBe(true);
+    }
   });
 });

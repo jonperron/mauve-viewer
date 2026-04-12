@@ -8,6 +8,7 @@ applyTo: "**/*.ts"
 - High cohesion, low coupling
 - 200-400 lines typical, 800 max per file
 - Organize by feature/domain, not by type
+- No circular import
 
 # Code Style
 
