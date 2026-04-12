@@ -1,7 +1,5 @@
-## Purpose
+## MODIFIED Requirements
 
-Defines genome rearrangement analysis capabilities: DCJ distance computation, extended DCJ permutation model, GRIMM analysis, recombination detection via WeakARG, backbone computation, and similarity index computation.
-## Requirements
 ### Requirement: DCJ distance computation
 The system SHALL compute Double Cut and Join (DCJ) distance between genome arrangements, along with breakpoint distance and Single Cut or Join (SCJ) distance. Distances are computed from an adjacency graph built by pairing block-endpoint adjacencies between two signed permutations.
 
@@ -184,4 +182,3 @@ The system SHALL compute per-genome similarity profiles from XMFA alignment data
 #### Scenario: Handle reverse-strand segments
 - **WHEN** a genome segment in an alignment block has strand `'-'`
 - **THEN** system traverses genome positions in descending order from `end` to `start`
-
