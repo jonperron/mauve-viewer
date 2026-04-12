@@ -14,9 +14,10 @@ import {
   showGenome,
   isVisuallyReverse,
   computePanelY,
+  setDisplayMode,
   HIDDEN_PANEL_HEIGHT,
 } from './viewer-state.ts';
-import type { ViewerState } from './viewer-state.ts';
+import type { ViewerState, DisplayMode } from './viewer-state.ts';
 import { setupZoom } from './zoom.ts';
 import type { ZoomHandle } from './zoom.ts';
 import { setupCursor } from './cursor.ts';
@@ -40,6 +41,12 @@ import type { RegionSelectionHandle } from './region-selection.ts';
 import { setupExportShortcut, createImageExportDialog } from './image-export.ts';
 import { setupPrintSupport, printAlignment } from './print-support.ts';
 import { setupNavigatorShortcut } from './sequence-navigator.ts';
+import { renderUngappedMatches, updateUngappedMatchesOnZoom } from './ungapped-match-renderer.ts';
+import { renderSimilarityProfiles, updateSimilarityProfilesOnZoom } from './similarity-profile-renderer.ts';
+import type { SimilarityProfileData } from './similarity-profile-renderer.ts';
+import { renderUnalignedRegions, updateUnalignedRegionsOnZoom } from './unaligned-regions.ts';
+import { computeMultiLevelProfile } from '../analysis/similarity/compute.ts';
+import type { MultiLevelProfile } from '../analysis/similarity/types.ts';
 
 export interface ViewerConfig {
   readonly width: number;
@@ -53,9 +60,8 @@ export interface ViewerConfig {
   };
 }
 
-/** Legacy layout constants matching the original JavaScript Mauve viewer */
-export const Y_POS_OFFSET = 30;
-export const LCB_HEIGHT = 22;
+export { Y_POS_OFFSET, LCB_HEIGHT } from './layout-constants.ts';
+import { Y_POS_OFFSET, LCB_HEIGHT } from './layout-constants.ts';
 
 const DEFAULT_CONFIG: ViewerConfig = {
   width: 1000,
@@ -135,6 +141,7 @@ export function renderAlignment(
   alignment: XmfaAlignment,
   config: ViewerConfig = DEFAULT_CONFIG,
   annotations?: AnnotationMap,
+  initialDisplayMode?: DisplayMode,
 ): ViewerHandle {
   const { lcbs } = alignment;
   const { width, margin } = config;
@@ -146,8 +153,28 @@ export function renderAlignment(
   d3.select(container).select('.alignment-wrapper').remove();
   d3.select(container).select('svg').remove();
 
+  // Determine initial display mode based on data availability
+  const hasBlocks = alignment.blocks.length > 0;
+  const defaultMode: DisplayMode = initialDisplayMode ?? 'lcb';
+
+  // Determine which display modes are available
+  const availableModes: DisplayMode[] = ['lcb'];
+  if (lcbs.length > 0) availableModes.push('ungapped-match');
+  if (hasBlocks) availableModes.push('similarity-profile');
+
   // Mutable state — held in closure for D3 callbacks (intentional exception to immutability rule)
-  let viewerState = createViewerState(alignment, config);
+  let viewerState = createViewerState(alignment, config, defaultMode);
+
+  // Precompute similarity profile data if blocks are available
+  let similarityData: SimilarityProfileData = { profiles: new Map() };
+  if (hasBlocks) {
+    const profiles = new Map<number, MultiLevelProfile>();
+    for (let i = 0; i < alignment.genomes.length; i++) {
+      profiles.set(i, computeMultiLevelProfile(alignment, i));
+    }
+    similarityData = { profiles };
+  }
+
   // Mutable options state — held in closure for options callbacks (intentional exception to immutability rule)
   let optionsState: OptionsState = { showGenomeId: true, showConnectingLines: true, showFeatures: true, showContigs: true };
 
@@ -173,8 +200,10 @@ export function renderAlignment(
     .attr('class', 'alignment-root')
     .attr('transform', `translate(${margin.left},${margin.top})`);
 
-  renderAllPanels(root, viewerState, lcbs, colors, config, optionsState.showGenomeId);
-  renderConnectingLines(root, viewerState, lcbs, colors, config);
+  renderAllPanels(root, viewerState, lcbs, colors, config, optionsState.showGenomeId, similarityData);
+  if (viewerState.displayMode === 'lcb') {
+    renderConnectingLines(root, viewerState, lcbs, colors, config);
+  }
 
   const svgNode = svg.node()!;
 
@@ -199,7 +228,7 @@ export function renderAlignment(
 
   const zoomHandle = setupZoom(svgNode, viewerState, (transform) => {
     viewerState = applyZoomTransform(viewerState, transform);
-    updatePanelsOnZoom(root, viewerState, lcbs, colors, config, optionsState.showConnectingLines);
+    updatePanelsOnZoom(root, viewerState, lcbs, colors, config, optionsState.showConnectingLines, similarityData);
     annotationsHandle?.update(viewerState, {
       showFeatures: optionsState.showFeatures,
       showContigs: optionsState.showContigs,
@@ -225,7 +254,12 @@ export function renderAlignment(
     onPanLeft: () => zoomHandle.panLeft(),
     onPanRight: () => zoomHandle.panRight(),
     onReset: () => zoomHandle.reset(),
-  });
+    onDisplayModeChange: (mode) => {
+      viewerState = setDisplayMode(viewerState, mode);
+      zoomHandle.reset();
+      rerenderPanels();
+    },
+  }, defaultMode, availableModes);
 
   function buildTrackControlLayout(): TrackControlLayout {
     const genomeCount = viewerState.alignment.genomes.length;
@@ -244,8 +278,8 @@ export function renderAlignment(
     root.selectAll('*').remove();
     const newHeight = computeTotalHeight(viewerState, config);
     svg.attr('height', newHeight).attr('viewBox', `0 0 ${width} ${newHeight}`);
-    renderAllPanels(root, viewerState, lcbs, colors, config, optionsState.showGenomeId);
-    if (optionsState.showConnectingLines) {
+    renderAllPanels(root, viewerState, lcbs, colors, config, optionsState.showGenomeId, similarityData);
+    if (optionsState.showConnectingLines && viewerState.displayMode === 'lcb') {
       renderConnectingLines(root, viewerState, lcbs, colors, config);
     }
     annotationsHandle?.update(viewerState, {
@@ -340,6 +374,7 @@ export function renderAlignment(
     },
     onToggleConnectingLines: (enabled) => {
       optionsState = { ...optionsState, showConnectingLines: enabled };
+      if (viewerState.displayMode !== 'lcb') return;
       if (enabled) {
         renderConnectingLines(root, viewerState, lcbs, colors, config);
         updateConnectingLinesOnZoom(root, viewerState, lcbs, config);
@@ -437,7 +472,7 @@ export function renderAlignment(
   };
 }
 
-/** Render all genome panels in display order, accounting for hidden genomes */
+/** Render all genome panels in display order, accounting for hidden genomes and display mode */
 function renderAllPanels(
   root: d3.Selection<SVGGElement, unknown, null, undefined>,
   state: ViewerState,
@@ -445,11 +480,53 @@ function renderAllPanels(
   colors: readonly string[],
   config: ViewerConfig,
   showGenomeId: boolean,
+  similarityData?: SimilarityProfileData,
 ): void {
   const { panelHeight } = config;
   const innerWidth = state.innerWidth;
   const genomeCount = state.alignment.genomes.length;
 
+  if (state.displayMode === 'ungapped-match') {
+    // Render hidden panels first, then delegate to ungapped renderer
+    for (let di = 0; di < genomeCount; di++) {
+      const dataIndex = state.genomeOrder[di]!;
+      const genome = state.alignment.genomes[dataIndex]!;
+      const panelY = computePanelY(state, config, di);
+      const isHidden = state.hiddenGenomes.has(dataIndex);
+      if (isHidden) {
+        renderHiddenPanel(root, genome, panelY, dataIndex, innerWidth, showGenomeId);
+      }
+    }
+    renderUngappedMatches(
+      root, state, lcbs, colors, config, showGenomeId,
+      renderPanelLabel, renderRuler,
+    );
+    // Add unaligned regions in ungapped-match mode
+    renderUnalignedRegionsForAll(root, state, lcbs);
+    return;
+  }
+
+  if (state.displayMode === 'similarity-profile' && similarityData) {
+    // Render hidden panels first, then delegate to similarity renderer
+    for (let di = 0; di < genomeCount; di++) {
+      const dataIndex = state.genomeOrder[di]!;
+      const genome = state.alignment.genomes[dataIndex]!;
+      const panelY = computePanelY(state, config, di);
+      const isHidden = state.hiddenGenomes.has(dataIndex);
+      if (isHidden) {
+        renderHiddenPanel(root, genome, panelY, dataIndex, innerWidth, showGenomeId);
+      }
+    }
+    renderSimilarityProfiles(
+      root, state, lcbs, colors, config, similarityData, showGenomeId,
+      renderPanelLabel, renderRuler,
+    );
+    // Add unaligned regions in similarity mode
+    renderUnalignedRegionsForAll(root, state, lcbs);
+    return;
+  }
+
+  // Default LCB mode
   for (let di = 0; di < genomeCount; di++) {
     const dataIndex = state.genomeOrder[di]!;
     const genome = state.alignment.genomes[dataIndex]!;
@@ -462,6 +539,48 @@ function renderAllPanels(
       renderGenomePanel(root, genome, panelY, dataIndex, lcbs, colors, panelHeight, innerWidth, state.referenceGenomeIndex, showGenomeId);
     }
   }
+  // Add unaligned regions in LCB mode
+  renderUnalignedRegionsForAll(root, state, lcbs);
+}
+
+/** Render unaligned regions for all visible genome panels */
+function renderUnalignedRegionsForAll(
+  root: d3.Selection<SVGGElement, unknown, null, undefined>,
+  state: ViewerState,
+  lcbs: readonly Lcb[],
+): void {
+  const genomeCount = state.alignment.genomes.length;
+  for (let di = 0; di < genomeCount; di++) {
+    const dataIndex = state.genomeOrder[di]!;
+    if (state.hiddenGenomes.has(dataIndex)) continue;
+    const genome = state.alignment.genomes[dataIndex]!;
+    const panel = root.select<SVGGElement>(`.genome-panel[data-genome-data-index="${dataIndex}"]`);
+    if (panel.empty()) continue;
+    const xScale = d3.scaleLinear()
+      .domain([0, genome.length])
+      .range([1, state.innerWidth + 1]);
+    renderUnalignedRegions(
+      panel,
+      dataIndex, lcbs, genome.length, xScale,
+    );
+  }
+}
+
+/** Shared label renderer used by all display modes */
+function renderPanelLabel(
+  panel: d3.Selection<SVGGElement, unknown, null, undefined>,
+  genome: { readonly name: string; readonly label?: string },
+  showGenomeId: boolean,
+): void {
+  panel
+    .append('text')
+    .attr('x', 0)
+    .attr('y', -3)
+    .attr('class', 'genome-label')
+    .attr('font-family', 'sans-serif')
+    .attr('font-size', '10px')
+    .attr('fill', '#888')
+    .text(getGenomeLabelWithOrganism(genome.name, showGenomeId, genome.label));
 }
 
 function renderGenomePanel(
@@ -659,7 +778,7 @@ function renderConnectingLines(
 
 /**
  * Update all panels when the zoom transform changes.
- * Rescales LCB blocks, rulers, and connecting lines.
+ * Rescales blocks/profiles, rulers, connecting lines, and unaligned regions.
  */
 function updatePanelsOnZoom(
   root: d3.Selection<SVGGElement, unknown, null, undefined>,
@@ -668,7 +787,21 @@ function updatePanelsOnZoom(
   colors: readonly string[],
   config: ViewerConfig,
   showConnectingLines: boolean,
+  similarityData?: SimilarityProfileData,
 ): void {
+  if (state.displayMode === 'ungapped-match') {
+    updateUngappedMatchesOnZoom(root, state, lcbs);
+    updateUnalignedRegionsOnZoom(root, state, lcbs);
+    return;
+  }
+
+  if (state.displayMode === 'similarity-profile' && similarityData) {
+    updateSimilarityProfilesOnZoom(root, state, lcbs, colors, config, similarityData);
+    updateUnalignedRegionsOnZoom(root, state, lcbs);
+    return;
+  }
+
+  // Default LCB mode
   const genomeCount = state.alignment.genomes.length;
   for (let di = 0; di < genomeCount; di++) {
     const dataIndex = state.genomeOrder[di]!;
@@ -697,10 +830,13 @@ function updatePanelsOnZoom(
       });
   }
 
-  // Update connecting lines only if visible
+  // Update connecting lines only if visible (LCB mode only)
   if (showConnectingLines) {
     updateConnectingLinesOnZoom(root, state, lcbs, config);
   }
+
+  // Update unaligned regions
+  updateUnalignedRegionsOnZoom(root, state, lcbs);
 }
 
 /** Update connecting midpoint lines when zoom changes */

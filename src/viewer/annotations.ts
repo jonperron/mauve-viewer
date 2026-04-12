@@ -4,7 +4,7 @@ import { FEATURE_COLORS, FEATURE_ZOOM_THRESHOLD } from '../annotations/types.ts'
 import type { ViewerState } from './viewer-state.ts';
 import { getZoomedScale, getVisibleRangeSize } from './viewer-state.ts';
 import type { ViewerConfig } from './alignment-viewer.ts';
-import { Y_POS_OFFSET, LCB_HEIGHT } from './alignment-viewer.ts';
+import { Y_POS_OFFSET, LCB_HEIGHT } from './layout-constants.ts';
 
 /** Display options for annotation rendering */
 export interface AnnotationDisplayOptions {
