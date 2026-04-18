@@ -47,7 +47,7 @@ import { computeMultiLevelProfile } from '../analysis/similarity/compute.ts';
 import type { MultiLevelProfile } from '../analysis/similarity/types.ts';
 import { computeBackbone } from '../analysis/backbone/index.ts';
 import type { BackboneSegment } from '../import/backbone/types.ts';
-import { exportSnps, downloadTextFile, exportGaps, exportPermutations, exportHomologs, exportIdentityMatrix } from '../export/index.ts';
+import { exportSnps, downloadTextFile, exportGaps, exportPermutations, exportHomologs, exportIdentityMatrix, exportCdsErrors } from '../export/index.ts';
 import type { ContigMap } from '../export/index.ts';
 import type { ContigBoundary } from '../annotations/types.ts';
 
@@ -466,6 +466,12 @@ export function renderAlignment(
     onExportIdentityMatrix: backbone.length > 0 ? () => {
       const content = exportIdentityMatrix(alignment, backbone);
       downloadTextFile(content, 'identity_matrix.tsv');
+    } : undefined,
+    onExportCdsErrors: hasBlocks && annotations && annotations.size > 0 ? () => {
+      const content = exportCdsErrors(alignment, annotations!);
+      if (content.length > 0) {
+        downloadTextFile(content, 'cds_errors.tsv');
+      }
     } : undefined,
     onPrint: () => {
       printAlignment(svgNode);

@@ -18,6 +18,7 @@ export interface OptionsCallbacks {
   readonly onExportPermutations?: () => void;
   readonly onExportHomologs?: () => void;
   readonly onExportIdentityMatrix?: () => void;
+  readonly onExportCdsErrors?: () => void;
   readonly onPrint?: () => void;
 }
 
@@ -97,7 +98,7 @@ export function createOptionsPanel(
   }
 
   // Action buttons (separator + buttons)
-  if (callbacks.onExportImage || callbacks.onExportSnps || callbacks.onExportGaps || callbacks.onExportPermutations || callbacks.onExportHomologs || callbacks.onExportIdentityMatrix || callbacks.onPrint) {
+  if (callbacks.onExportImage || callbacks.onExportSnps || callbacks.onExportGaps || callbacks.onExportPermutations || callbacks.onExportHomologs || callbacks.onExportIdentityMatrix || callbacks.onExportCdsErrors || callbacks.onPrint) {
     const separator = document.createElement('hr');
     separator.className = 'options-separator';
     dropdown.appendChild(separator);
@@ -172,6 +173,18 @@ export function createOptionsPanel(
         callbacks.onExportIdentityMatrix?.();
       });
       dropdown.appendChild(matrixBtn);
+    }
+
+    if (callbacks.onExportCdsErrors) {
+      const cdsBtn = document.createElement('button');
+      cdsBtn.type = 'button';
+      cdsBtn.className = 'options-action-btn';
+      cdsBtn.textContent = 'Export CDS Errors';
+      cdsBtn.addEventListener('click', () => {
+        dropdown.classList.remove('show');
+        callbacks.onExportCdsErrors?.();
+      });
+      dropdown.appendChild(cdsBtn);
     }
 
     if (callbacks.onPrint) {
