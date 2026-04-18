@@ -50,7 +50,7 @@ import { computeMultiLevelProfile } from '../analysis/similarity/compute.ts';
 import type { MultiLevelProfile } from '../analysis/similarity/types.ts';
 import { computeBackbone } from '../analysis/backbone/index.ts';
 import type { BackboneSegment } from '../import/backbone/types.ts';
-import { exportSnps, downloadTextFile, exportGaps } from '../export/index.ts';
+import { exportSnps, downloadTextFile, exportGaps, exportPermutations, exportHomologs } from '../export/index.ts';
 import type { ContigMap } from '../export/index.ts';
 import type { ContigBoundary } from '../annotations/types.ts';
 
@@ -448,6 +448,23 @@ export function renderAlignment(
       const contigMap: ContigMap = new Map(contigEntries);
       const content = exportGaps(alignment, contigMap);
       downloadTextFile(content, 'gaps.tsv');
+    } : undefined,
+    onExportPermutations: lcbs.length > 0 ? () => {
+      const contigEntries: [number, readonly ContigBoundary[]][] = [];
+      if (annotations) {
+        for (const [genomeIndex, genomeAnnotations] of annotations) {
+          contigEntries.push([genomeIndex, genomeAnnotations.contigs]);
+        }
+      }
+      const contigMap: ContigMap = new Map(contigEntries);
+      const content = exportPermutations(alignment, undefined, contigMap);
+      downloadTextFile(content, 'permutations.txt');
+    } : undefined,
+    onExportHomologs: backbone.length > 0 && annotations && annotations.size > 0 ? () => {
+      const content = exportHomologs(alignment, backbone, annotations!);
+      if (content.length > 0) {
+        downloadTextFile(content, 'positional_orthologs.tsv');
+      }
     } : undefined,
     onPrint: () => {
       printAlignment(svgNode);
