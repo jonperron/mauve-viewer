@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeUnalignedRegions } from './unaligned-regions.ts';
-import type { Lcb } from '../xmfa/types.ts';
+import type { Lcb } from '../import/xmfa/types.ts';
 
 function makeLcbs(): readonly Lcb[] {
   return [

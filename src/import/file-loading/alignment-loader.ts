@@ -1,15 +1,15 @@
 import {
   buildAnnotationMap,
   loadAnnotationFiles,
-} from '../annotations/file-annotations.ts';
+} from '../../annotations/file-annotations.ts';
 import { detectFormat } from '../format-detection/index.ts';
 import type { FileFormat } from '../format-detection/index.ts';
 import { parseJsonLcbs } from '../json-lcbs/index.ts';
 import { parseMauveAsXmfa } from '../mauve-format/index.ts';
-import { enrichJsonGenomeNames } from '../services/patric-genome-labels.ts';
-import { renderAlignment } from '../viewer/alignment-viewer.ts';
-import type { ViewerHandle } from '../viewer/alignment-viewer.ts';
-import type { AnnotationMap } from '../viewer/annotations.ts';
+import { enrichJsonGenomeNames } from '../../services/patric-genome-labels.ts';
+import { renderAlignment } from '../../viewer/alignment-viewer.ts';
+import type { ViewerHandle } from '../../viewer/alignment-viewer.ts';
+import type { AnnotationMap } from '../../viewer/annotations.ts';
 import { parseXmfa } from '../xmfa/index.ts';
 import type { XmfaAlignment } from '../xmfa/types.ts';
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { extractGaps, formatGapTable, exportGaps } from './gap-export.ts';
 import type { GapRecord } from './gap-export.ts';
-import type { XmfaAlignment, AlignmentBlock, Genome } from '../../xmfa/types.ts';
+import type { XmfaAlignment, AlignmentBlock, Genome } from '../import/xmfa/types.ts';
 import type { ContigMap } from './snp-export.ts';
 
 function makeAlignment(

@@ -1,4 +1,4 @@
-import { createAlignmentLoader } from './file-loading/alignment-loader.ts';
+import { createAlignmentLoader } from './import/file-loading/alignment-loader.ts';
 
 const alignmentLoader = createAlignmentLoader();
 

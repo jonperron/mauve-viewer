@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { setupZoom } from './zoom.ts';
 import { createViewerState } from './viewer-state.ts';
 import type { ViewerState } from './viewer-state.ts';
-import type { XmfaAlignment } from '../xmfa/types.ts';
+import type { XmfaAlignment } from '../import/xmfa/types.ts';
 import type { ViewerConfig } from './alignment-viewer.ts';
 import * as d3 from 'd3';
 

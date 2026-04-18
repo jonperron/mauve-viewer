@@ -5,7 +5,7 @@ import {
   formatPermutationOutput,
   exportPermutations,
 } from './permutation-export.ts';
-import type { Lcb, Genome, XmfaAlignment } from '../../xmfa/types.ts';
+import type { Lcb, Genome, XmfaAlignment } from '../import/xmfa/types.ts';
 import type { ContigMap } from './snp-export.ts';
 
 function makeLcb(

@@ -4,7 +4,7 @@ import {
   extractGenomeId,
   fetchPatricGenomeLabels,
 } from './patric-genome-labels.ts';
-import type { XmfaAlignment } from '../xmfa/types.ts';
+import type { XmfaAlignment } from '../import/xmfa/types.ts';
 
 function makeAlignment(names: readonly string[]): XmfaAlignment {
   return {

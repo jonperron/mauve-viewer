@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-import type { XmfaAlignment, Lcb } from '../xmfa/types.ts';
+import type { XmfaAlignment, Lcb } from '../import/xmfa/types.ts';
 import type { ViewerConfig } from './alignment-viewer.ts';
 
 /** Display mode for the alignment viewer */

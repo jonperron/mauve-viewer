@@ -1,4 +1,4 @@
-import type { XmfaAlignment } from '../xmfa/types.ts';
+import type { XmfaAlignment } from '../import/xmfa/types.ts';
 
 const PATRIC_GENOME_API_URL = 'https://p3.theseed.org/services/data_api/genome/';
 const PATRIC_LABEL_TIMEOUT_MS = 5000;

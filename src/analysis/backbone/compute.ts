@@ -1,5 +1,5 @@
-import type { BackboneSegment, GenomeInterval } from '../../backbone/types.ts';
-import type { Lcb } from '../../xmfa/types.ts';
+import type { BackboneSegment, GenomeInterval } from '../../import/backbone/types.ts';
+import type { Lcb } from '../../import/xmfa/types.ts';
 
 export interface BackboneOptions {
   /** Minimum LCB weight to include (default: 0) */

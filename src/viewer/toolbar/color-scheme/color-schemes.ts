@@ -1,5 +1,5 @@
-import type { BackboneSegment } from '../backbone/types.ts';
-import type { Lcb, XmfaAlignment } from '../xmfa/types.ts';
+import type { BackboneSegment } from '../import/backbone/types.ts';
+import type { Lcb, XmfaAlignment } from '../import/xmfa/types.ts';
 
 /** HSB constants matching the Java Mauve color scheme (ColorScheme.java) */
 const MATCH_SAT = 0.8;

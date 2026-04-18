@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { computeSimilarityProfile, computeMultiLevelProfile, selectProfileForZoom } from './compute.ts';
-import type { XmfaAlignment, AlignmentBlock, Genome } from '../../xmfa/types.ts';
+import type { XmfaAlignment, AlignmentBlock, Genome } from '../../import/xmfa/types.ts';
 
 function makeAlignment(
   sequences: string[][],

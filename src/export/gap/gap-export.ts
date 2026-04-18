@@ -1,6 +1,6 @@
-import type { XmfaAlignment, AlignmentBlock, AlignedSegment, Genome } from '../../xmfa/types.ts';
-import type { ContigMap } from './snp-export.ts';
-import { resolveContig } from './snp-export.ts';
+import type { XmfaAlignment, AlignmentBlock, AlignedSegment, Genome } from '../import/xmfa/types.ts';
+import type { ContigMap } from '../snp/snp-export.ts';
+import { resolveContig } from '../snp/snp-export.ts';
 
 /** A single gap record with position and length data */
 export interface GapRecord {

@@ -1,8 +1,8 @@
 import { parseGenBankMulti } from './index.ts';
-import { parseEmblMulti } from '../embl/index.ts';
-import { parseInsdseqMulti } from '../insdseq/index.ts';
+import { parseEmblMulti } from '../import/embl/index.ts';
+import { parseInsdseqMulti } from '../import/insdseq/index.ts';
 import type { GenomeAnnotations } from './index.ts';
-import type { FileFormat } from '../format-detection/index.ts';
+import type { FileFormat } from '../import/format-detection/index.ts';
 import type { AnnotationMap } from '../viewer/annotations.ts';
 
 function readFileAsText(file: File): Promise<string> {

@@ -1,5 +1,5 @@
-import type { XmfaAlignment, AlignmentBlock, AlignedSegment, Genome } from '../../xmfa/types.ts';
-import type { ContigBoundary } from '../../annotations/types.ts';
+import type { XmfaAlignment, AlignmentBlock, AlignedSegment, Genome } from '../import/xmfa/types.ts';
+import type { ContigBoundary } from '../annotations/types.ts';
 
 /** A single SNP record with per-genome position data */
 export interface SnpRecord {

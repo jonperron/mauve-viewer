@@ -1,4 +1,4 @@
-import type { XmfaAlignment } from '../../xmfa/types.ts';
+import type { XmfaAlignment } from '../../import/xmfa/types.ts';
 import type { MultiLevelProfile, SimilarityOptions, SimilarityProfile } from './types.ts';
 
 /**
