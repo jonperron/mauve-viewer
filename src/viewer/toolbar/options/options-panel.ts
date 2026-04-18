@@ -15,6 +15,8 @@ export interface OptionsCallbacks {
   readonly onExportImage?: () => void;
   readonly onExportSnps?: () => void;
   readonly onExportGaps?: () => void;
+  readonly onExportPermutations?: () => void;
+  readonly onExportHomologs?: () => void;
   readonly onPrint?: () => void;
 }
 
@@ -94,7 +96,7 @@ export function createOptionsPanel(
   }
 
   // Action buttons (separator + buttons)
-  if (callbacks.onExportImage || callbacks.onExportSnps || callbacks.onExportGaps || callbacks.onPrint) {
+  if (callbacks.onExportImage || callbacks.onExportSnps || callbacks.onExportGaps || callbacks.onExportPermutations || callbacks.onExportHomologs || callbacks.onPrint) {
     const separator = document.createElement('hr');
     separator.className = 'options-separator';
     dropdown.appendChild(separator);
@@ -133,6 +135,30 @@ export function createOptionsPanel(
         callbacks.onExportGaps?.();
       });
       dropdown.appendChild(gapBtn);
+    }
+
+    if (callbacks.onExportPermutations) {
+      const permBtn = document.createElement('button');
+      permBtn.type = 'button';
+      permBtn.className = 'options-action-btn';
+      permBtn.textContent = 'Export Permutations';
+      permBtn.addEventListener('click', () => {
+        dropdown.classList.remove('show');
+        callbacks.onExportPermutations?.();
+      });
+      dropdown.appendChild(permBtn);
+    }
+
+    if (callbacks.onExportHomologs) {
+      const homologBtn = document.createElement('button');
+      homologBtn.type = 'button';
+      homologBtn.className = 'options-action-btn';
+      homologBtn.textContent = 'Export Positional Orthologs';
+      homologBtn.addEventListener('click', () => {
+        dropdown.classList.remove('show');
+        callbacks.onExportHomologs?.();
+      });
+      dropdown.appendChild(homologBtn);
     }
 
     if (callbacks.onPrint) {

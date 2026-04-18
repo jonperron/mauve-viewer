@@ -33,3 +33,17 @@ export type {
   PermutationChromosome,
   GenomePermutation,
 } from './permutation/permutation-export.ts';
+
+export {
+  extractHomologs,
+  formatHomologTable,
+  exportHomologs,
+  DEFAULT_HOMOLOG_PARAMS,
+} from './homolog/homolog-export.ts';
+
+export type {
+  HomologExportParameters,
+  HomologMember,
+  HomologGroup,
+  HomologResult,
+} from './homolog/homolog-export.ts';
