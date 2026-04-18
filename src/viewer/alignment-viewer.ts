@@ -47,9 +47,11 @@ import { computeMultiLevelProfile } from '../analysis/similarity/compute.ts';
 import type { MultiLevelProfile } from '../analysis/similarity/types.ts';
 import { computeBackbone } from '../analysis/backbone/index.ts';
 import type { BackboneSegment } from '../import/backbone/types.ts';
-import { exportSnps, downloadTextFile, exportGaps, exportPermutations, exportHomologs, exportIdentityMatrix, exportCdsErrors } from '../export/index.ts';
+import { exportSnps, downloadTextFile, exportGaps, exportPermutations, exportHomologs, exportIdentityMatrix, exportCdsErrors, runSummaryPipeline, exportSummary } from '../export/index.ts';
 import type { ContigMap } from '../export/index.ts';
 import type { ContigBoundary } from '../annotations/types.ts';
+import { createHomologExportDialog } from './toolbar/options/homolog-export-dialog.ts';
+import { createSummaryExportDialog } from './toolbar/options/summary-export-dialog.ts';
 
 export interface ViewerConfig {
   readonly width: number;
@@ -392,6 +394,9 @@ export function renderAlignment(
     },
   );
 
+  // Mutable dialog handle — held in closure for export dialog lifecycle (intentional exception to immutability rule)
+  let activeDialogHandle: { destroy: () => void } | undefined;
+
   const optionsPanelHandle = createOptionsPanel(controlsBar, {
     onToggleGenomeId: (enabled) => {
       optionsState = { ...optionsState, showGenomeId: enabled };
@@ -458,10 +463,14 @@ export function renderAlignment(
       downloadTextFile(content, 'permutations.txt');
     } : undefined,
     onExportHomologs: backbone.length > 0 && annotations && annotations.size > 0 ? () => {
-      const content = exportHomologs(alignment, backbone, annotations!);
-      if (content.length > 0) {
-        downloadTextFile(content, 'positional_orthologs.tsv');
-      }
+      activeDialogHandle?.destroy();
+      activeDialogHandle = createHomologExportDialog(container, (params) => {
+        activeDialogHandle = undefined;
+        const content = exportHomologs(alignment, backbone, annotations!, params);
+        if (content.length > 0) {
+          downloadTextFile(content, 'positional_orthologs.tsv');
+        }
+      });
     } : undefined,
     onExportIdentityMatrix: backbone.length > 0 ? () => {
       const content = exportIdentityMatrix(alignment, backbone);
@@ -472,6 +481,23 @@ export function renderAlignment(
       if (content.length > 0) {
         downloadTextFile(content, 'cds_errors.tsv');
       }
+    } : undefined,
+    onExportSummary: backbone.length > 0 ? () => {
+      activeDialogHandle?.destroy();
+      activeDialogHandle = createSummaryExportDialog(container, (options) => {
+        activeDialogHandle = undefined;
+        const annotationsList = annotations
+          ? Array.from(annotations.values())
+          : [];
+        const result = runSummaryPipeline({
+          backboneSegments: backbone,
+          lcbs,
+          genomes: alignment.genomes,
+          annotations: annotationsList.length > 0 ? annotationsList : undefined,
+          options,
+        });
+        exportSummary(result);
+      });
     } : undefined,
     onPrint: () => {
       printAlignment(svgNode);

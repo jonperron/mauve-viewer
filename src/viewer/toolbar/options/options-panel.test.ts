@@ -265,4 +265,66 @@ describe('createOptionsPanel', () => {
     const btns = c.querySelectorAll('.options-action-btn');
     expect(btns.length).toBe(2);
   });
+
+  it('renders all export buttons when all callbacks provided', () => {
+    document.body.innerHTML = '';
+    const c = createContainer();
+    const cb = {
+      ...createCallbacks(),
+      onExportImage: vi.fn(),
+      onExportSnps: vi.fn(),
+      onExportGaps: vi.fn(),
+      onExportPermutations: vi.fn(),
+      onExportHomologs: vi.fn(),
+      onExportIdentityMatrix: vi.fn(),
+      onExportCdsErrors: vi.fn(),
+      onExportSummary: vi.fn(),
+      onPrint: vi.fn(),
+    };
+    createOptionsPanel(c, cb);
+
+    const btns = c.querySelectorAll('.options-action-btn');
+    expect(btns.length).toBe(9);
+
+    const labels = Array.from(btns).map((b) => b.textContent);
+    expect(labels).toContain('Export SNPs');
+    expect(labels).toContain('Export Gaps');
+    expect(labels).toContain('Export Permutations');
+    expect(labels).toContain('Export Positional Orthologs');
+    expect(labels).toContain('Export Identity Matrix');
+    expect(labels).toContain('Export CDS Errors');
+    expect(labels).toContain('Export Summary');
+  });
+
+  it('renders summary button and calls callback when clicked', () => {
+    document.body.innerHTML = '';
+    const c = createContainer();
+    const onExportSummary = vi.fn();
+    const cb = { ...createCallbacks(), onExportSummary };
+    createOptionsPanel(c, cb);
+
+    const toggle = c.querySelector<HTMLButtonElement>('.options-toggle')!;
+    toggle.click();
+
+    const btns = c.querySelectorAll<HTMLButtonElement>('.options-action-btn');
+    const summaryBtn = Array.from(btns).find((b) => b.textContent?.includes('Summary'))!;
+    expect(summaryBtn).toBeDefined();
+    summaryBtn.click();
+
+    expect(onExportSummary).toHaveBeenCalledOnce();
+  });
+
+  it('only renders buttons for provided callbacks', () => {
+    document.body.innerHTML = '';
+    const c = createContainer();
+    const cb = { ...createCallbacks(), onExportSnps: vi.fn(), onExportGaps: vi.fn() };
+    createOptionsPanel(c, cb);
+
+    const btns = c.querySelectorAll('.options-action-btn');
+    expect(btns.length).toBe(2);
+
+    const labels = Array.from(btns).map((b) => b.textContent);
+    expect(labels).toContain('Export SNPs');
+    expect(labels).toContain('Export Gaps');
+  });
 });

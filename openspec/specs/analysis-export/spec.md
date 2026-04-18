@@ -155,13 +155,21 @@ The system SHALL identify and export sets of positionally homologous annotated f
 
 **Output format**: Tab-delimited text. Each group occupies one line with tab-separated members in the format `genomeIndex:locus_tag:left-right`. Singletons are listed after groups, one per line in the same format. The output ends with a newline. An empty result (no groups or singletons) SHALL produce an empty string.
 
-**UI integration**: The "Export Positional Orthologs" button SHALL appear in the Options panel only when backbone data AND annotations are loaded (`backbone.length > 0 && annotations.size > 0`). Clicking it SHALL trigger a browser file download of `positional_orthologs.tsv`.
+**UI integration**: The "Export Positional Orthologs" button SHALL appear in the Options panel only when backbone data AND annotations are loaded (`backbone.length > 0 && annotations.size > 0`). Clicking it SHALL open a configuration dialog where the user can set identity range (0–1), coverage range (0–1), and feature type (CDS/gene/tRNA/rRNA/misc_RNA). The dialog SHALL display default values from `DEFAULT_HOMOLOG_PARAMS`. The dialog SHALL be a modal with backdrop, dismissable via Cancel button, backdrop click, or Escape key. Clicking Export in the dialog SHALL trigger a browser file download of `positional_orthologs.tsv` using the configured parameters.
 
 **Known limitation**: The alignment output option (XMFA per ortholog group) is not yet implemented — only tabular export is supported.
 
 #### Scenario: Export positional homologs with default parameters
 - **WHEN** user clicks "Export Positional Orthologs" in the Options panel with backbone data and annotations loaded
-- **THEN** system identifies positional homologs using default thresholds (identity 0.6–1.0, coverage 0.7–1.0, CDS features) and downloads `positional_orthologs.tsv` containing tab-delimited ortholog groups followed by singletons
+- **THEN** system opens a configuration dialog pre-filled with default thresholds (identity 0.6–1.0, coverage 0.7–1.0, CDS features)
+
+#### Scenario: Confirm homolog export with custom parameters
+- **WHEN** user adjusts identity, coverage, and feature type in the homolog export dialog and clicks Export
+- **THEN** system identifies positional homologs using the user-specified thresholds and downloads `positional_orthologs.tsv`
+
+#### Scenario: Dismiss homolog export dialog
+- **WHEN** user presses Escape, clicks Cancel, or clicks the backdrop in the homolog export dialog
+- **THEN** system closes the dialog without exporting
 
 #### Scenario: Button visibility requires both backbone and annotations
 - **WHEN** backbone data is loaded AND annotations are loaded
@@ -355,6 +363,26 @@ The system SHALL produce batch summary analysis outputs from backbone segments, 
 
 **Export orchestration**: The `exportSummary` function SHALL trigger browser file downloads for all generated output files using a configurable file prefix (default: `alignment`). Per-genome files SHALL only be downloaded when non-empty.
 
+**UI integration**: The "Export Summary" button SHALL appear in the Options panel only when backbone data is loaded (`backbone.length > 0`). Clicking it SHALL open a configuration dialog where the user can set island min length, backbone min length, max length ratio, and min percent contained. The dialog SHALL display default values from `DEFAULT_SUMMARY_OPTIONS`. The dialog SHALL be a modal with backdrop, dismissable via Cancel button, backdrop click, or Escape key. Clicking Export in the dialog SHALL run the summary pipeline with the configured options and trigger browser file downloads for all generated output files.
+
+#### Scenario: Summary export button visibility
+- **WHEN** backbone data is loaded (backbone.length > 0)
+- **THEN** the "Export Summary" button is visible in the Options panel
+- **WHEN** backbone data is NOT loaded
+- **THEN** the "Export Summary" button is NOT visible
+
+#### Scenario: Open summary config dialog
+- **WHEN** user clicks "Export Summary" in the Options panel with backbone data loaded
+- **THEN** system opens a configuration dialog pre-filled with default summary options (island min 50, backbone min 50, max ratio 3.0, min contained 0.5)
+
+#### Scenario: Confirm summary export with custom options
+- **WHEN** user adjusts summary options in the dialog and clicks Export
+- **THEN** system runs the summary pipeline with user-specified options and triggers browser file downloads for all output files
+
+#### Scenario: Dismiss summary config dialog
+- **WHEN** user presses Escape, clicks Cancel, or clicks the backdrop in the summary export dialog
+- **THEN** system closes the dialog without exporting
+
 #### Scenario: Run summary pipeline with backbone and annotations
 - **WHEN** user invokes the summary pipeline with backbone segments, LCBs, genome metadata, and annotations loaded
 - **THEN** system processes segments into per-genome chains, identifies islands, computes multiplicity, generates overview with gene counts, island coordinates, per-genome island/backbone gene files, and trouble backbone report
@@ -433,4 +461,22 @@ The system SHALL export the current alignment view as a raster image (PNG or JPE
 #### Scenario: JPEG quality presets
 - **WHEN** user selects JPEG format in the export dialog
 - **THEN** system shows a quality dropdown with Low (0.5), Medium (0.75), and High (0.95) options
+
+### Requirement: Export button rendering
+
+The Options panel SHALL render export action buttons from an ordered data-driven definition list (`ACTION_BUTTON_DEFS`). Each button SHALL only be rendered when its corresponding callback is defined (non-undefined) in `OptionsCallbacks`. The button order SHALL be: Export Image, Export SNPs, Export Gaps, Export Permutations, Export Positional Orthologs, Export Identity Matrix, Export CDS Errors, Export Summary, Print. At most one export configuration dialog SHALL be open at a time; opening a new dialog SHALL destroy any previously open dialog.
+
+#### Scenario: Conditional button rendering
+- **WHEN** an export callback is provided (non-undefined) in OptionsCallbacks
+- **THEN** the corresponding button SHALL be rendered in the Options panel
+- **WHEN** an export callback is undefined
+- **THEN** the corresponding button SHALL NOT be rendered
+
+#### Scenario: Button order
+- **WHEN** multiple export buttons are rendered
+- **THEN** they SHALL appear in the defined order: Export Image, Export SNPs, Export Gaps, Export Permutations, Export Positional Orthologs, Export Identity Matrix, Export CDS Errors, Export Summary, Print
+
+#### Scenario: Dialog stacking prevention
+- **WHEN** user clicks an export button that opens a config dialog while another config dialog is already open
+- **THEN** the previously open dialog SHALL be destroyed before the new dialog opens
 
