@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createNavigationToolbar } from './navigation-toolbar.ts';
-import type { NavigationCallbacks } from './navigation-toolbar.ts';
-import type { DisplayMode } from './viewer-state.ts';
+import { createNavigationToolbar } from '../navigation-toolbar.ts';
+import type { NavigationCallbacks } from '../navigation-toolbar.ts';
+import type { DisplayMode } from '../../viewer-state.ts';
 
 describe('createNavigationToolbar with display mode selector', () => {
   let container: HTMLDivElement;
