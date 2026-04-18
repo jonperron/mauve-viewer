@@ -13,6 +13,7 @@ export interface OptionsCallbacks {
   readonly onToggleFeatures: (enabled: boolean) => void;
   readonly onToggleContigs: (enabled: boolean) => void;
   readonly onExportImage?: () => void;
+  readonly onExportSnps?: () => void;
   readonly onPrint?: () => void;
 }
 
@@ -92,7 +93,7 @@ export function createOptionsPanel(
   }
 
   // Action buttons (separator + buttons)
-  if (callbacks.onExportImage || callbacks.onPrint) {
+  if (callbacks.onExportImage || callbacks.onExportSnps || callbacks.onPrint) {
     const separator = document.createElement('hr');
     separator.className = 'options-separator';
     dropdown.appendChild(separator);
@@ -107,6 +108,18 @@ export function createOptionsPanel(
         callbacks.onExportImage?.();
       });
       dropdown.appendChild(exportBtn);
+    }
+
+    if (callbacks.onExportSnps) {
+      const snpBtn = document.createElement('button');
+      snpBtn.type = 'button';
+      snpBtn.className = 'options-action-btn';
+      snpBtn.textContent = 'Export SNPs';
+      snpBtn.addEventListener('click', () => {
+        dropdown.classList.remove('show');
+        callbacks.onExportSnps?.();
+      });
+      dropdown.appendChild(snpBtn);
     }
 
     if (callbacks.onPrint) {
