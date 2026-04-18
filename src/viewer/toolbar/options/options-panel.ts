@@ -17,6 +17,7 @@ export interface OptionsCallbacks {
   readonly onExportGaps?: () => void;
   readonly onExportPermutations?: () => void;
   readonly onExportHomologs?: () => void;
+  readonly onExportIdentityMatrix?: () => void;
   readonly onPrint?: () => void;
 }
 
@@ -96,7 +97,7 @@ export function createOptionsPanel(
   }
 
   // Action buttons (separator + buttons)
-  if (callbacks.onExportImage || callbacks.onExportSnps || callbacks.onExportGaps || callbacks.onExportPermutations || callbacks.onExportHomologs || callbacks.onPrint) {
+  if (callbacks.onExportImage || callbacks.onExportSnps || callbacks.onExportGaps || callbacks.onExportPermutations || callbacks.onExportHomologs || callbacks.onExportIdentityMatrix || callbacks.onPrint) {
     const separator = document.createElement('hr');
     separator.className = 'options-separator';
     dropdown.appendChild(separator);
@@ -159,6 +160,18 @@ export function createOptionsPanel(
         callbacks.onExportHomologs?.();
       });
       dropdown.appendChild(homologBtn);
+    }
+
+    if (callbacks.onExportIdentityMatrix) {
+      const matrixBtn = document.createElement('button');
+      matrixBtn.type = 'button';
+      matrixBtn.className = 'options-action-btn';
+      matrixBtn.textContent = 'Export Identity Matrix';
+      matrixBtn.addEventListener('click', () => {
+        dropdown.classList.remove('show');
+        callbacks.onExportIdentityMatrix?.();
+      });
+      dropdown.appendChild(matrixBtn);
     }
 
     if (callbacks.onPrint) {
