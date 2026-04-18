@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { setupCursor } from './cursor.ts';
-import { createViewerState, applyZoomTransform } from './viewer-state.ts';
-import { renderAlignment } from './alignment-viewer.ts';
-import type { ViewerHandle } from './alignment-viewer.ts';
-import type { XmfaAlignment } from '../import/xmfa/types.ts';
-import type { ViewerConfig } from './alignment-viewer.ts';
+import { createViewerState, applyZoomTransform } from '../viewer-state.ts';
+import { renderAlignment } from '../alignment-viewer.ts';
+import type { ViewerHandle } from '../alignment-viewer.ts';
+import type { XmfaAlignment } from '../../import/xmfa/types.ts';
+import type { ViewerConfig } from '../alignment-viewer.ts';
 import * as d3 from 'd3';
 
 const TEST_CONFIG: ViewerConfig = {

@@ -1,11 +1,11 @@
 import * as d3 from 'd3';
-import type { ViewerConfig } from './alignment-viewer.ts';
-import type { ViewerState } from './viewer-state.ts';
+import type { ViewerConfig } from '../alignment-viewer.ts';
+import type { ViewerState } from '../viewer-state.ts';
 import {
   pixelToPosition,
   getVisibleGenomeOrder,
   computePanelY,
-} from './viewer-state.ts';
+} from '../viewer-state.ts';
 
 /** Selected region in a genome panel */
 export interface SelectedRegion {

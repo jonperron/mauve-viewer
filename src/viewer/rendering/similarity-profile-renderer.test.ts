@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import * as d3 from 'd3';
 import { renderSimilarityProfiles, updateSimilarityProfilesOnZoom } from './similarity-profile-renderer.ts';
 import type { SimilarityProfileData } from './similarity-profile-renderer.ts';
-import { createViewerState, applyZoomTransform } from './viewer-state.ts';
-import type { ViewerConfig } from './alignment-viewer.ts';
-import type { XmfaAlignment } from '../import/xmfa/types.ts';
-import type { MultiLevelProfile, SimilarityProfile } from '../analysis/similarity/types.ts';
+import { createViewerState, applyZoomTransform } from '../viewer-state.ts';
+import type { ViewerConfig } from '../alignment-viewer.ts';
+import type { XmfaAlignment } from '../../import/xmfa/types.ts';
+import type { MultiLevelProfile, SimilarityProfile } from '../../analysis/similarity/types.ts';
 
 const TEST_CONFIG: ViewerConfig = {
   width: 1000,

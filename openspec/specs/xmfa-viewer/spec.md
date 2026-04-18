@@ -302,55 +302,11 @@ The system SHALL map positions across genomes using LCB-relative fractional offs
 ### Requirement: Navigation toolbar
 The system SHALL display a navigation toolbar in a controls bar above the alignment SVG. The controls bar SHALL arrange its children in the following order: shortcuts help button, navigation toolbar, color scheme menu, and options panel, displayed on a single horizontal line using flexbox layout. The toolbar SHALL contain five buttons: Reset, Pan Left, Zoom In, Zoom Out, and Pan Right. Each button SHALL invoke the corresponding `ZoomHandle` method (`reset()`, `panLeft()`, `zoomIn()`, `zoomOut()`, `panRight()`). The toolbar SHALL use a `<div>` with `role="toolbar"` and `aria-label="Navigation controls"`. Each button SHALL have a descriptive `aria-label` attribute and a `title` tooltip that includes the keyboard shortcut hint (e.g., "Zoom in (Ctrl+Up)"). The controls bar SHALL be inserted as the first child of the viewer container element. The toolbar SHALL be removed from the DOM when `destroy()` is called on the `NavigationToolbarHandle`. When multiple display modes are available, the toolbar SHALL include a display mode selector dropdown: a `<select>` element with class `display-mode-selector`, `aria-label="Display mode"`, and `title="Display mode"`. The dropdown SHALL only be rendered when more than one display mode is available. Options SHALL use labels: "LCB Display" for `lcb`, "Ungapped Matches" for `ungapped-match`, "Similarity Profile" for `similarity-profile`. Selecting a mode SHALL invoke `onDisplayModeChange` on `NavigationCallbacks` with type-safe validation via `isDisplayMode()`.
 
-**Module**: `src/viewer/navigation-toolbar.ts`
+**Module**: `src/viewer/toolbar/navigation-toolbar.ts`
 
 #### Scenario: Display navigation toolbar
 - **WHEN** `renderAlignment` is called with a container element and alignment data
 - **THEN** system inserts a controls bar with a navigation toolbar containing Reset, Pan Left, Zoom In, Zoom Out, and Pan Right buttons above the SVG element
-
-#### Scenario: Zoom in via toolbar button
-- **WHEN** user clicks the Zoom In button in the navigation toolbar
-- **THEN** system zooms in 2× centered on the current view (equivalent to Ctrl+Up)
-
-#### Scenario: Zoom out via toolbar button
-- **WHEN** user clicks the Zoom Out button in the navigation toolbar
-- **THEN** system zooms out 2× centered on the current view (equivalent to Ctrl+Down)
-
-#### Scenario: Pan left via toolbar button
-- **WHEN** user clicks the Pan Left button in the navigation toolbar
-- **THEN** system scrolls left by 10% of the visible range (equivalent to Ctrl+Left)
-
-#### Scenario: Pan right via toolbar button
-- **WHEN** user clicks the Pan Right button in the navigation toolbar
-- **THEN** system scrolls right by 10% of the visible range (equivalent to Ctrl+Right)
-
-#### Scenario: Reset view via toolbar button
-- **WHEN** user clicks the Reset button in the navigation toolbar
-- **THEN** system returns to the initial 1× zoom with no pan offset
-
-#### Scenario: Toolbar buttons are accessible
-- **WHEN** the navigation toolbar is rendered
-- **THEN** each button has an `aria-label` attribute and a `title` tooltip with a keyboard shortcut hint
-
-#### Scenario: Toolbar cleanup on destroy
-- **WHEN** `destroy()` is called on the `NavigationToolbarHandle`
-- **THEN** the toolbar element is removed from the DOM
-
-#### Scenario: Show display mode selector
-- **WHEN** the alignment has multiple available display modes
-- **THEN** the navigation toolbar displays a dropdown selector with the available mode labels
-
-#### Scenario: Hide display mode selector for single mode
-- **WHEN** the alignment only supports one display mode (e.g., LCB only)
-- **THEN** the navigation toolbar does not render the display mode selector
-
-#### Scenario: Select ungapped match mode from dropdown
-- **WHEN** user selects "Ungapped Matches" from the display mode dropdown
-- **THEN** system validates the value, invokes `onDisplayModeChange('ungapped-match')`, resets zoom, and re-renders in ungapped match mode
-
-#### Scenario: Display mode selector is accessible
-- **WHEN** the display mode selector is rendered
-- **THEN** it has `aria-label="Display mode"` and a `title="Display mode"` attribute
 
 ### Requirement: Track controls sidebar
 The system SHALL display a track controls sidebar to the left of the alignment SVG. The sidebar SHALL contain one control group per genome panel, each with four buttons: move up (▲), move down (▼), set reference (R), and toggle visibility (−/+). The sidebar SHALL use a `<div>` with `role="toolbar"` and `aria-label="Track controls"`. Each button SHALL have a descriptive `aria-label` and `title` attribute. The R button for the current reference genome SHALL have an `active` CSS class. The sidebar SHALL be fully rebuilt on every state change (reorder, reference change, or visibility toggle). The sidebar SHALL be inserted as the first child of the viewer container element and removed from the DOM when `destroy()` is called on the `TrackControlsHandle`.
@@ -476,28 +432,16 @@ The system SHALL show or hide contig boundary vertical lines when the "Show Cont
 ### Requirement: Ungapped match rendering
 The system SHALL render ungapped match blocks as thin colored rectangles (8px height) within each genome panel when in ungapped-match display mode. Each LCB is rendered as a `<rect>` element with class `match-block`, colored by the current LCB color scheme with 0.7 opacity. Forward-orientation matches are vertically centered in the forward LCB zone; reverse-orientation matches in the reverse LCB zone. Hidden genome panels are skipped. The renderer accepts shared `renderLabel` and `renderRuler` callbacks for consistent panel layout across modes. On zoom, match block positions and widths SHALL be updated via `updateUngappedMatchesOnZoom()` using the zoomed scale, with a minimum rendered width of 2px.
 
-**Module**: `src/viewer/ungapped-match-renderer.ts`
+**Module**: `src/viewer/rendering/ungapped-match-renderer.ts`
 
 #### Scenario: Render ungapped matches for a genome
 - **WHEN** display mode is ungapped-match and a genome has LCB data
 - **THEN** system renders 8px-height colored rectangles for each LCB block present in that genome
 
-#### Scenario: Reverse-orientation ungapped match placement
-- **WHEN** an LCB is in reverse complement orientation relative to the reference genome
-- **THEN** the match rectangle is placed in the reverse zone (below the center line)
-
-#### Scenario: Zoom updates ungapped match positions
-- **WHEN** user zooms while in ungapped-match mode
-- **THEN** all match block x positions and widths are recalculated from the zoomed scale
-
-#### Scenario: Hidden genomes skipped in ungapped mode
-- **WHEN** a genome is hidden while in ungapped-match mode
-- **THEN** no match blocks are rendered for that genome
-
 ### Requirement: Similarity profile rendering
 The system SHALL render similarity profiles as filled D3 area charts within each genome panel when in similarity-profile display mode. Profiles are precomputed as `MultiLevelProfile` data (via `computeMultiLevelProfile()` from `src/analysis/similarity/compute.ts`) on alignment load. The appropriate resolution level is selected at render time via `selectProfileForZoom()` based on the current base-pairs-per-pixel ratio. Each LCB region is rendered as a separate filled area colored by the LCB color with 0.6 fill-opacity. The profile height represents local sequence conservation (0–100%), scaled to `PROFILE_HEIGHT = LCB_HEIGHT * 2`. Forward-orientation profiles grow upward from a baseline; reverse-orientation profiles grow downward. On zoom, profiles are fully re-rendered with the appropriate resolution level via `updateSimilarityProfilesOnZoom()`.
 
-**Module**: `src/viewer/similarity-profile-renderer.ts`
+**Module**: `src/viewer/rendering/similarity-profile-renderer.ts`
 
 **Data type**: `SimilarityProfileData { profiles: ReadonlyMap<number, MultiLevelProfile> }`
 
@@ -505,26 +449,10 @@ The system SHALL render similarity profiles as filled D3 area charts within each
 - **WHEN** display mode is similarity-profile and multi-level profiles have been computed
 - **THEN** system renders filled area charts within each visible genome panel, one per LCB region
 
-#### Scenario: Zoom-adaptive profile resolution
-- **WHEN** user zooms in while in similarity-profile mode
-- **THEN** system selects a finer-grained profile resolution level and re-renders the area charts
-
-#### Scenario: Per-LCB coloring
-- **WHEN** similarity profiles are rendered
-- **THEN** each LCB region's area fill uses the LCB's assigned color from the current color scheme with 0.6 fill-opacity
-
-#### Scenario: Reverse-orientation profile direction
-- **WHEN** an LCB is in reverse complement orientation relative to the reference genome
-- **THEN** the similarity profile area grows downward from a lower baseline instead of upward
-
-#### Scenario: Profiles precomputed on load
-- **WHEN** an alignment with block data is loaded
-- **THEN** system precomputes `MultiLevelProfile` for each genome and caches it in memory for the viewer session
-
 ### Requirement: Unaligned region rendering
 The system SHALL compute and display unaligned genomic regions — regions not covered by any LCB — as white semi-transparent indicator blocks. The algorithm collects all LCB intervals for a genome, sorts by start position, merges overlapping intervals, and computes gaps. Gaps with size ≥ 1 bp are rendered as `<rect>` elements with class `unaligned-block`, filled white (`#ffffff`) with 0.85 fill-opacity and a light gray stroke (`#ddd`, 0.5px). The blocks span the full profile height (`LCB_HEIGHT * 2`) starting at `Y_POS_OFFSET`. Unaligned regions are rendered in all three display modes. On zoom, unaligned block positions are updated via `updateUnalignedRegionsOnZoom()`.
 
-**Module**: `src/viewer/unaligned-regions.ts`
+**Module**: `src/viewer/rendering/unaligned-regions.ts`
 
 **Exported functions**:
 - `computeUnalignedRegions(lcbs, genomeIndex, genomeLength)` → `readonly CoveredInterval[]`
@@ -535,44 +463,12 @@ The system SHALL compute and display unaligned genomic regions — regions not c
 - **WHEN** a genome has LCBs covering positions 100–500 and 800–1200 out of a 2000bp genome
 - **THEN** `computeUnalignedRegions` returns gaps at 1–99, 501–799, and 1201–2000
 
-#### Scenario: Render unaligned regions
-- **WHEN** genome panels are rendered in any display mode
-- **THEN** white semi-transparent blocks are overlaid on regions not covered by any LCB
-
-#### Scenario: Zoom updates unaligned region positions
-- **WHEN** user zooms while unaligned regions are visible
-- **THEN** block x positions and widths are recalculated from the zoomed scale
-
-#### Scenario: No unaligned regions when fully covered
-- **WHEN** all positions in a genome are covered by LCBs with no gaps
-- **THEN** no unaligned region blocks are rendered
-
 ### Requirement: Keyboard shortcuts help panel
 The system SHALL display a keyboard shortcuts help panel in the controls bar above the alignment SVG. The help panel SHALL consist of a circular "?" button (`aria-label="Keyboard shortcuts"`, `title="Keyboard shortcuts (?)"`) and a toggleable floating box listing all keyboard shortcuts. The shortcuts list SHALL be rendered as a definition list (`<dl>`) with each shortcut showing key bindings in `<kbd>` elements and a description. The listed shortcuts SHALL include: Ctrl+Up (Zoom in), Ctrl+Down (Zoom out), Ctrl+Left (Pan left), Ctrl+Right (Pan right), Ctrl+Shift+Left/Right (Pan faster), Ctrl+E (Export image), Ctrl+P (Print), Ctrl+I (Sequence navigator), Escape (Close dialog / clear selection), and ? (Toggle this help). Pressing the "?" key (without Ctrl, Alt, or Meta modifiers) SHALL toggle the help box visibility. The "?" keydown handler SHALL be ignored when the active element is an INPUT, TEXTAREA, or SELECT to avoid interfering with form input. Clicking outside the shortcuts help wrapper SHALL close the help box. The `ShortcutsHelpHandle.destroy()` method SHALL remove the keydown and click event listeners and remove the wrapper element from the DOM. The shortcuts help button SHALL be the first element appended to the controls bar.
 
-**Module**: `src/viewer/shortcuts-help.ts`
+**Module**: `src/viewer/interaction/shortcuts-help.ts`
 
 #### Scenario: Display shortcuts help button
 - **WHEN** `renderAlignment` is called with a container element and alignment data
 - **THEN** the controls bar contains a circular "?" button with `aria-label="Keyboard shortcuts"` as its first element
-
-#### Scenario: Toggle help panel via button click
-- **WHEN** user clicks the "?" button
-- **THEN** system toggles the visibility of the shortcuts help box listing all keyboard shortcuts
-
-#### Scenario: Toggle help panel via "?" key
-- **WHEN** user presses the "?" key without Ctrl, Alt, or Meta modifiers and focus is not on a form element
-- **THEN** system toggles the visibility of the shortcuts help box
-
-#### Scenario: "?" key ignored in form elements
-- **WHEN** user presses the "?" key while focus is on an INPUT, TEXTAREA, or SELECT element
-- **THEN** system does not toggle the shortcuts help box
-
-#### Scenario: Close help panel on outside click
-- **WHEN** the shortcuts help box is visible and user clicks outside the shortcuts help wrapper
-- **THEN** system closes the shortcuts help box
-
-#### Scenario: Shortcuts help cleanup on destroy
-- **WHEN** `destroy()` is called on the `ShortcutsHelpHandle`
-- **THEN** system removes the keydown and click document event listeners and removes the wrapper element from the DOM
 

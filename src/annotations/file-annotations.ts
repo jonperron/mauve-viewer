@@ -3,7 +3,7 @@ import { parseEmblMulti } from '../import/embl/index.ts';
 import { parseInsdseqMulti } from '../import/insdseq/index.ts';
 import type { GenomeAnnotations } from './index.ts';
 import type { FileFormat } from '../import/format-detection/index.ts';
-import type { AnnotationMap } from '../viewer/annotations.ts';
+import type { AnnotationMap } from '../viewer/rendering/annotations.ts';
 
 function readFileAsText(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
