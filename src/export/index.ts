@@ -47,3 +47,15 @@ export type {
   HomologGroup,
   HomologResult,
 } from './homolog/homolog-export.ts';
+
+export {
+  countPairwiseSubstitutions,
+  computeSharedBackboneLength,
+  computeIdentityMatrix,
+  formatIdentityMatrix,
+  exportIdentityMatrix,
+} from './identity-matrix/identity-matrix-export.ts';
+
+export type {
+  IdentityMatrixResult,
+} from './identity-matrix/identity-matrix-export.ts';
