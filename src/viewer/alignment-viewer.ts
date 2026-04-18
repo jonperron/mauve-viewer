@@ -50,6 +50,9 @@ import { computeMultiLevelProfile } from '../analysis/similarity/compute.ts';
 import type { MultiLevelProfile } from '../analysis/similarity/types.ts';
 import { computeBackbone } from '../analysis/backbone/index.ts';
 import type { BackboneSegment } from '../backbone/types.ts';
+import { exportSnps, downloadTextFile } from '../analysis/export/snp-export.ts';
+import type { ContigMap } from '../analysis/export/snp-export.ts';
+import type { ContigBoundary } from '../annotations/types.ts';
 
 export interface ViewerConfig {
   readonly width: number;
@@ -424,6 +427,17 @@ export function renderAlignment(
     onExportImage: () => {
       createImageExportDialog(container, svgNode);
     },
+    onExportSnps: hasBlocks ? () => {
+      const contigEntries: [number, readonly ContigBoundary[]][] = [];
+      if (annotations) {
+        for (const [genomeIndex, genomeAnnotations] of annotations) {
+          contigEntries.push([genomeIndex, genomeAnnotations.contigs]);
+        }
+      }
+      const contigMap: ContigMap = new Map(contigEntries);
+      const content = exportSnps(alignment, contigMap);
+      downloadTextFile(content, 'snps.tsv');
+    } : undefined,
     onPrint: () => {
       printAlignment(svgNode);
     },
