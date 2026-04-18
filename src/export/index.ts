@@ -59,3 +59,18 @@ export {
 export type {
   IdentityMatrixResult,
 } from './identity-matrix/identity-matrix-export.ts';
+
+export {
+  detectCdsErrors,
+  formatCdsErrors,
+  exportCdsErrors,
+} from './cds-errors/cds-error-detection.ts';
+
+export type {
+  BrokenCds,
+  CdsErrorResult,
+  AaSubstitution,
+  PrematureStop,
+  Frameshift,
+  GapSegment,
+} from './cds-errors/cds-error-detection.ts';
