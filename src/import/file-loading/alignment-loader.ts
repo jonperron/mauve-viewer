@@ -9,7 +9,7 @@ import { parseMauveAsXmfa } from '../mauve-format/index.ts';
 import { enrichJsonGenomeNames } from '../../services/patric-genome-labels.ts';
 import { renderAlignment } from '../../viewer/alignment-viewer.ts';
 import type { ViewerHandle } from '../../viewer/alignment-viewer.ts';
-import type { AnnotationMap } from '../../viewer/annotations.ts';
+import type { AnnotationMap } from '../../viewer/rendering/annotations.ts';
 import { parseXmfa } from '../xmfa/index.ts';
 import type { XmfaAlignment } from '../xmfa/types.ts';
 

@@ -1,6 +1,6 @@
 import * as d3 from 'd3';
-import type { ViewerConfig } from './alignment-viewer.ts';
-import type { ViewerState } from './viewer-state.ts';
+import type { ViewerConfig } from '../alignment-viewer.ts';
+import type { ViewerState } from '../viewer-state.ts';
 import {
   pixelToPosition,
   positionToPixel,
@@ -8,7 +8,7 @@ import {
   findHomologousPositions,
   getVisibleGenomeOrder,
   computePanelY,
-} from './viewer-state.ts';
+} from '../viewer-state.ts';
 
 /** Cursor info displayed on hover */
 export interface CursorInfo {

@@ -5,7 +5,7 @@ import {
   buildDetailContent,
   createFeatureTooltip,
 } from './feature-tooltip.ts';
-import type { GenomicFeature } from '../annotations/types.ts';
+import type { GenomicFeature } from '../../annotations/types.ts';
 
 function makeFeature(overrides?: Partial<GenomicFeature>): GenomicFeature {
   return {

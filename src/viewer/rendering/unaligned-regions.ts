@@ -1,8 +1,8 @@
 import * as d3 from 'd3';
-import type { Lcb } from '../import/xmfa/types.ts';
-import type { ViewerState } from './viewer-state.ts';
-import { getZoomedScale } from './viewer-state.ts';
-import { Y_POS_OFFSET, LCB_HEIGHT } from './layout-constants.ts';
+import type { Lcb } from '../../import/xmfa/types.ts';
+import type { ViewerState } from '../viewer-state.ts';
+import { getZoomedScale } from '../viewer-state.ts';
+import { Y_POS_OFFSET, LCB_HEIGHT } from '../layout-constants.ts';
 
 /** Height of the unaligned region indicator */
 const UNALIGNED_HEIGHT = LCB_HEIGHT * 2;

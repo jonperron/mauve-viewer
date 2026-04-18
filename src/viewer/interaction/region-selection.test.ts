@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setupRegionSelection } from './region-selection.ts';
 import type { RegionSelectionHandle } from './region-selection.ts';
-import type { ViewerState } from './viewer-state.ts';
-import type { ViewerConfig } from './alignment-viewer.ts';
+import type { ViewerState } from '../viewer-state.ts';
+import type { ViewerConfig } from '../alignment-viewer.ts';
 import * as d3 from 'd3';
 
 function makeState(): ViewerState {

@@ -1,6 +1,6 @@
-import type { GenomicFeature } from '../annotations/types.ts';
-import type { AnnotationMap } from './annotations.ts';
-import { escapeHtml } from './feature-tooltip.ts';
+import type { GenomicFeature } from '../../annotations/types.ts';
+import type { AnnotationMap } from '../rendering/annotations.ts';
+import { escapeHtml } from '../rendering/feature-tooltip.ts';
 
 /** Search mode for feature queries */
 export type SearchMode = 'exact' | 'contains';

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { searchFeatures } from './sequence-navigator.ts';
-import type { AnnotationMap } from './annotations.ts';
-import type { GenomeAnnotations, GenomicFeature } from '../annotations/types.ts';
+import type { AnnotationMap } from '../rendering/annotations.ts';
+import type { GenomeAnnotations, GenomicFeature } from '../../annotations/types.ts';
 
 function makeFeature(overrides: Partial<GenomicFeature> = {}): GenomicFeature {
   return {

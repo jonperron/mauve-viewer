@@ -1,4 +1,4 @@
-import type { GenomicFeature } from '../annotations/types.ts';
+import type { GenomicFeature } from '../../annotations/types.ts';
 
 /** Handle for the feature tooltip element */
 export interface FeatureTooltipHandle {

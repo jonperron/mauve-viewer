@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { renderAlignment } from './alignment-viewer.ts';
-import type { ViewerHandle } from './alignment-viewer.ts';
-import type { XmfaAlignment } from '../import/xmfa/types.ts';
-import type { GenomeAnnotations } from '../annotations/types.ts';
+import { renderAlignment } from '../alignment-viewer.ts';
+import type { ViewerHandle } from '../alignment-viewer.ts';
+import type { XmfaAlignment } from '../../import/xmfa/types.ts';
+import type { GenomeAnnotations } from '../../annotations/types.ts';
 import type { AnnotationMap } from './annotations.ts';
 
 function makeAlignment(): XmfaAlignment {

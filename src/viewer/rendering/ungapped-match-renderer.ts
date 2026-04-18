@@ -1,13 +1,13 @@
 import * as d3 from 'd3';
-import type { Lcb } from '../import/xmfa/types.ts';
-import type { ViewerState } from './viewer-state.ts';
-import type { ViewerConfig } from './alignment-viewer.ts';
+import type { Lcb } from '../../import/xmfa/types.ts';
+import type { ViewerState } from '../viewer-state.ts';
+import type { ViewerConfig } from '../alignment-viewer.ts';
 import {
   getZoomedScale,
   isVisuallyReverse,
   computePanelY,
-} from './viewer-state.ts';
-import { Y_POS_OFFSET, LCB_HEIGHT } from './layout-constants.ts';
+} from '../viewer-state.ts';
+import { Y_POS_OFFSET, LCB_HEIGHT } from '../layout-constants.ts';
 
 /** Height of individual match rectangles (thinner than LCB blocks) */
 const MATCH_HEIGHT = 8;
