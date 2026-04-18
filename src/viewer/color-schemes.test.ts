@@ -9,8 +9,8 @@ import {
   generateDistinctColors,
 } from './color-schemes.ts';
 import type { ColorSchemeId } from './color-schemes.ts';
-import type { XmfaAlignment, Lcb, Genome } from '../xmfa/types.ts';
-import type { BackboneSegment } from '../backbone/types.ts';
+import type { XmfaAlignment, Lcb, Genome } from '../import/xmfa/types.ts';
+import type { BackboneSegment } from '../import/backbone/types.ts';
 
 function makeGenomes(count: number): readonly Genome[] {
   return Array.from({ length: count }, (_, i) => ({

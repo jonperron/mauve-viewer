@@ -4,7 +4,7 @@ import {
   setDisplayMode,
 } from './viewer-state.ts';
 import type { DisplayMode } from './viewer-state.ts';
-import type { XmfaAlignment } from '../xmfa/types.ts';
+import type { XmfaAlignment } from '../import/xmfa/types.ts';
 import type { ViewerConfig } from './alignment-viewer.ts';
 
 const TEST_CONFIG: ViewerConfig = {

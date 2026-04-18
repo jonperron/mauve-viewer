@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { computeBackbone, computeIslands, filterByWeight, getMultiplicityMask } from './compute.ts';
-import type { Lcb } from '../../xmfa/types.ts';
+import type { Lcb } from '../../import/xmfa/types.ts';
 
 function makeLcb(id: number, left: number[], right: number[], weight: number): Lcb {
   return {

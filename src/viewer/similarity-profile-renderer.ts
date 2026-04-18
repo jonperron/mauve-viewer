@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-import type { Lcb } from '../xmfa/types.ts';
+import type { Lcb } from '../import/xmfa/types.ts';
 import type { ViewerState } from './viewer-state.ts';
 import type { ViewerConfig } from './alignment-viewer.ts';
 import type { SimilarityProfile, MultiLevelProfile } from '../analysis/similarity/types.ts';

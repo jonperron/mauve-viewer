@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { extractSnps, formatSnpTable, exportSnps, resolveContig } from './snp-export.ts';
-import type { XmfaAlignment, AlignmentBlock, Genome } from '../../xmfa/types.ts';
-import type { ContigBoundary } from '../../annotations/types.ts';
+import type { XmfaAlignment, AlignmentBlock, Genome } from '../import/xmfa/types.ts';
+import type { ContigBoundary } from '../annotations/types.ts';
 import type { ContigMap } from './snp-export.ts';
 
 function makeAlignment(

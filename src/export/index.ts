@@ -4,32 +4,32 @@ export {
   exportSnps,
   resolveContig,
   downloadTextFile,
-} from './snp-export.ts';
+} from './snp/snp-export.ts';
 
 export type {
   SnpRecord,
   SnpGenomePosition,
   ContigMap,
-} from './snp-export.ts';
+} from './snp/snp-export.ts';
 
 export {
   extractGaps,
   formatGapTable,
   exportGaps,
-} from './gap-export.ts';
+} from './gap/gap-export.ts';
 
 export type {
   GapRecord,
-} from './gap-export.ts';
+} from './gap/gap-export.ts';
 
 export {
   projectLcbs,
   computePermutations,
   formatPermutationOutput,
   exportPermutations,
-} from './permutation-export.ts';
+} from './permutation/permutation-export.ts';
 
 export type {
   PermutationChromosome,
   GenomePermutation,
-} from './permutation-export.ts';
+} from './permutation/permutation-export.ts';

@@ -1,6 +1,6 @@
-import type { Lcb, Genome, XmfaAlignment } from '../../xmfa/types.ts';
-import type { ContigBoundary } from '../../annotations/types.ts';
-import type { ContigMap } from './snp-export.ts';
+import type { Lcb, Genome, XmfaAlignment } from '../import/xmfa/types.ts';
+import type { ContigBoundary } from '../annotations/types.ts';
+import type { ContigMap } from '../snp/snp-export.ts';
 
 /** A single chromosome's signed permutation values */
 export interface PermutationChromosome {

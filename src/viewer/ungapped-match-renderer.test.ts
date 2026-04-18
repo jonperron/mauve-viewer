@@ -3,7 +3,7 @@ import * as d3 from 'd3';
 import { renderUngappedMatches, updateUngappedMatchesOnZoom } from './ungapped-match-renderer.ts';
 import { createViewerState, applyZoomTransform } from './viewer-state.ts';
 import type { ViewerConfig } from './alignment-viewer.ts';
-import type { XmfaAlignment } from '../xmfa/types.ts';
+import type { XmfaAlignment } from '../import/xmfa/types.ts';
 
 const TEST_CONFIG: ViewerConfig = {
   width: 1000,

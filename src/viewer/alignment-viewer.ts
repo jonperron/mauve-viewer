@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-import type { XmfaAlignment, Lcb } from '../xmfa/types.ts';
+import type { XmfaAlignment, Lcb } from '../import/xmfa/types.ts';
 import {
   createViewerState,
   applyZoomTransform,
@@ -49,10 +49,9 @@ import { renderUnalignedRegions, updateUnalignedRegionsOnZoom } from './unaligne
 import { computeMultiLevelProfile } from '../analysis/similarity/compute.ts';
 import type { MultiLevelProfile } from '../analysis/similarity/types.ts';
 import { computeBackbone } from '../analysis/backbone/index.ts';
-import type { BackboneSegment } from '../backbone/types.ts';
-import { exportSnps, downloadTextFile } from '../analysis/export/snp-export.ts';
-import { exportGaps } from '../analysis/export/gap-export.ts';
-import type { ContigMap } from '../analysis/export/snp-export.ts';
+import type { BackboneSegment } from '../import/backbone/types.ts';
+import { exportSnps, downloadTextFile, exportGaps } from '../export/index.ts';
+import type { ContigMap } from '../export/index.ts';
 import type { ContigBoundary } from '../annotations/types.ts';
 
 export interface ViewerConfig {

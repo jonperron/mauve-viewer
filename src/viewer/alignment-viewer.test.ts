@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderAlignment, getGenomeLabel, getGenomeLabelWithOrganism } from './alignment-viewer.ts';
 import type { ViewerHandle } from './alignment-viewer.ts';
-import type { XmfaAlignment } from '../xmfa/types.ts';
+import type { XmfaAlignment } from '../import/xmfa/types.ts';
 
 function makeAlignment(overrides?: Partial<XmfaAlignment>): XmfaAlignment {
   return {
