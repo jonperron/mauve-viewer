@@ -51,6 +51,7 @@ import type { MultiLevelProfile } from '../analysis/similarity/types.ts';
 import { computeBackbone } from '../analysis/backbone/index.ts';
 import type { BackboneSegment } from '../backbone/types.ts';
 import { exportSnps, downloadTextFile } from '../analysis/export/snp-export.ts';
+import { exportGaps } from '../analysis/export/gap-export.ts';
 import type { ContigMap } from '../analysis/export/snp-export.ts';
 import type { ContigBoundary } from '../annotations/types.ts';
 
@@ -437,6 +438,17 @@ export function renderAlignment(
       const contigMap: ContigMap = new Map(contigEntries);
       const content = exportSnps(alignment, contigMap);
       downloadTextFile(content, 'snps.tsv');
+    } : undefined,
+    onExportGaps: hasBlocks ? () => {
+      const contigEntries: [number, readonly ContigBoundary[]][] = [];
+      if (annotations) {
+        for (const [genomeIndex, genomeAnnotations] of annotations) {
+          contigEntries.push([genomeIndex, genomeAnnotations.contigs]);
+        }
+      }
+      const contigMap: ContigMap = new Map(contigEntries);
+      const content = exportGaps(alignment, contigMap);
+      downloadTextFile(content, 'gaps.tsv');
     } : undefined,
     onPrint: () => {
       printAlignment(svgNode);

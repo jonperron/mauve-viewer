@@ -14,6 +14,7 @@ export interface OptionsCallbacks {
   readonly onToggleContigs: (enabled: boolean) => void;
   readonly onExportImage?: () => void;
   readonly onExportSnps?: () => void;
+  readonly onExportGaps?: () => void;
   readonly onPrint?: () => void;
 }
 
@@ -93,7 +94,7 @@ export function createOptionsPanel(
   }
 
   // Action buttons (separator + buttons)
-  if (callbacks.onExportImage || callbacks.onExportSnps || callbacks.onPrint) {
+  if (callbacks.onExportImage || callbacks.onExportSnps || callbacks.onExportGaps || callbacks.onPrint) {
     const separator = document.createElement('hr');
     separator.className = 'options-separator';
     dropdown.appendChild(separator);
@@ -120,6 +121,18 @@ export function createOptionsPanel(
         callbacks.onExportSnps?.();
       });
       dropdown.appendChild(snpBtn);
+    }
+
+    if (callbacks.onExportGaps) {
+      const gapBtn = document.createElement('button');
+      gapBtn.type = 'button';
+      gapBtn.className = 'options-action-btn';
+      gapBtn.textContent = 'Export Gaps';
+      gapBtn.addEventListener('click', () => {
+        dropdown.classList.remove('show');
+        callbacks.onExportGaps?.();
+      });
+      dropdown.appendChild(gapBtn);
     }
 
     if (callbacks.onPrint) {
