@@ -1,9 +1,16 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
+import fastifyWebSocket from '@fastify/websocket';
+import { JobManager, type JobManagerConfig } from './alignment/job-manager.js';
+import {
+  registerAlignmentRoutes,
+  registerAlignmentWebSocket,
+} from './alignment/routes.js';
 
 export interface ServerOptions {
   readonly logger: boolean;
   readonly staticRoot: string;
+  readonly alignment?: JobManagerConfig;
 }
 
 export function buildApp(options: ServerOptions): FastifyInstance {
@@ -15,6 +22,15 @@ export function buildApp(options: ServerOptions): FastifyInstance {
   });
 
   app.get('/api/health', async () => ({ status: 'ok' }));
+
+  if (options.alignment) {
+    app.register(fastifyWebSocket);
+    const jobManager = new JobManager(options.alignment);
+    registerAlignmentRoutes(app, jobManager);
+    app.after(() => {
+      registerAlignmentWebSocket(app, jobManager);
+    });
+  }
 
   app.setNotFoundHandler(async (request, reply) => {
     if (request.url.startsWith('/api/')) {

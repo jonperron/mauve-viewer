@@ -26,6 +26,7 @@ Coding rules are defined in `.github/instructions/` and loaded automatically by 
 - [compare-with-legacy.instructions.md](.github/instructions/compare-with-legacy.instructions.md) - Feature comparison with legacy (applied to `**/*.ts`)
 - [commit-messages.instructions.md](.github/instructions/commit-messages.instructions.md) - Commit message instruction (loaded on-demand)
 - [write-documentation.instructions.md](.github/instructions/write-documentation.instructions.md) - Product documentation guidelines for `doc/` (loaded on-demand)
+- [openapi-spec.instructions.md](.github/instructions/openapi-spec.instructions.md) - OpenAPI specification guidelines for `server/openapi.yaml` (applied to `**/*openapi*.yaml` and ``server/**/routes.ts``)
 
 
 ## Subagents
