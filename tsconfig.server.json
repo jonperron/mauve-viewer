@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "rootDir": "server",
+    "outDir": "dist/server",
+    "module": "nodenext",
+    "target": "es2024",
+    "lib": ["es2024"],
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUncheckedIndexedAccess": true,
+    "declaration": false,
+    "sourceMap": true
+  },
+  "include": ["server"]
+}

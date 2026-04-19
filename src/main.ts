@@ -1,5 +1,7 @@
 import { createAlignmentLoader } from './import/file-loading/alignment-loader.ts';
 
+declare const __APP_VERSION__: string;
+
 const alignmentLoader = createAlignmentLoader();
 
 function setupDropZone(): void {
@@ -42,4 +44,12 @@ function loadFiles(files: readonly File[], viewer: HTMLElement): void {
   alignmentLoader.loadFiles(files, viewer);
 }
 
+function renderFooter(): void {
+  const footer = document.getElementById('appFooter');
+  if (footer) {
+    footer.textContent = `v${__APP_VERSION__}`;
+  }
+}
+
 setupDropZone();
+renderFooter();
