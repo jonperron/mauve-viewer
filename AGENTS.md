@@ -25,6 +25,7 @@ Coding rules are defined in `.github/instructions/` and loaded automatically by 
 - [security.instructions.md](.github/instructions/security.instructions.md) — Secrets, input validation, CSRF (loaded on-demand)
 - [compare-with-legacy.instructions.md](.github/instructions/compare-with-legacy.instructions.md) - Feature comparison with legacy (applied to `**/*.ts`)
 - [commit-messages.instructions.md](.github/instructions/commit-messages.instructions.md) - Commit message instruction (loaded on-demand)
+- [write-documentation.instructions.md](.github/instructions/write-documentation.instructions.md) - Product documentation guidelines for `doc/` (loaded on-demand)
 
 
 ## Subagents
@@ -36,5 +37,6 @@ When completing a task, delegate to subagents for quality assurance:
 - **Test** — Use the test agent (`.github/agents/test.agent.md`) to verify that changes are covered by tests and tests pass
 - **Security** — Use the security agent (`.github/agents/security.agent.md`) to check for vulnerabilities when handling user input, file parsing, or external data
 - **OpenSpec** — Use the openspec agent (`.github/agents/openspec.agent.md`) to update specifications after implementing or modifying features
+- **Documentation** — Use the documentation agent (`.github/agents/documentation.agent.md`) to review product documentation in `doc/` for accuracy, completeness, and adherence to guidelines
 
 Specifications must always be up to date at the end of any task that adds, changes, or removes functionality. After completing implementation work, run the OpenSpec subagent to synchronize `openspec/specs/` with the current state of the code.
