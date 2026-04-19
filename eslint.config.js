@@ -5,7 +5,7 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', 'server/**/*.ts'],
   },
   {
     ignores: ['dist/', 'node_modules/', 'mauve/'],
