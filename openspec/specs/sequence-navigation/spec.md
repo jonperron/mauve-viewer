@@ -3,10 +3,10 @@
 Defines the sequence navigator and feature search system: multi-criteria feature search, exact/contains modes, per-genome search scope, direct coordinate navigation, and feature name lookup.
 ## Requirements
 ### Requirement: Feature search by multiple criteria
-The system SHALL provide a sequence navigator interface (accessible via Ctrl+I keyboard shortcut) that searches annotated features across all loaded genomes by locus_tag, gene, product, protein_id, note, and db_xref qualifiers. The navigator SHALL be a panel with a dialog role and "Sequence navigator" aria-label, containing two tabs: "Find Features" and "Go To Position". Search results SHALL be displayed as a scrollable list (max 100 results shown, with a count of additional results) with each result showing feature type, genome name, locus_tag, gene name, product, coordinates, and strand. Clicking a search result SHALL navigate to the midpoint of that feature. All user-provided text in the navigator SHALL be escaped via escapeHtml to prevent XSS.
+The system SHALL provide a sequence navigator interface (accessible via Ctrl+G keyboard shortcut) that searches annotated features across all loaded genomes by locus_tag, gene, product, protein_id, note, and db_xref qualifiers. The navigator SHALL be a panel with a dialog role and "Sequence navigator" aria-label, containing two tabs: "Find Features" and "Go To Position". Search results SHALL be displayed as a scrollable list (max 100 results shown, with a count of additional results) with each result showing feature type, genome name, locus_tag, gene name, product, coordinates, and strand. Clicking a search result SHALL navigate to the midpoint of that feature. All user-provided text in the navigator SHALL be escaped via escapeHtml to prevent XSS.
 
 #### Scenario: Search by product description
-- **WHEN** user presses Ctrl+I, types "penicillin" in the search field, and clicks Search
+- **WHEN** user presses Ctrl+G, types "penicillin" in the search field, and clicks Search
 - **THEN** system searches all loaded genomes and displays matching features in a scrollable result list
 
 #### Scenario: Navigate to search result
@@ -17,8 +17,8 @@ The system SHALL provide a sequence navigator interface (accessible via Ctrl+I k
 - **WHEN** user presses Escape or clicks the close button on the navigator panel
 - **THEN** system removes the navigator panel from the DOM
 
-#### Scenario: Toggle navigator with Ctrl+I
-- **WHEN** user presses Ctrl+I while the navigator is open
+#### Scenario: Toggle navigator with Ctrl+G
+- **WHEN** user presses Ctrl+G while the navigator is open
 - **THEN** system closes the navigator panel
 
 ### Requirement: Search modes
@@ -62,9 +62,9 @@ The system SHALL allow navigation to a specific named feature via View → Go To
 - **THEN** system navigates to the first feature matching that name
 
 ### Requirement: Sequence navigator available only with annotations
-The system SHALL only enable the Ctrl+I sequence navigator shortcut when annotations are loaded. Without annotations, the shortcut SHALL have no effect.
+The system SHALL only enable the Ctrl+G sequence navigator shortcut when annotations are loaded. Without annotations, the shortcut SHALL have no effect.
 
 #### Scenario: Navigator unavailable without annotations
-- **WHEN** user presses Ctrl+I with no annotations loaded
+- **WHEN** user presses Ctrl+G with no annotations loaded
 - **THEN** system does not open the sequence navigator
 

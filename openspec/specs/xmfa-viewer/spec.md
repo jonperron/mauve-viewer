@@ -278,7 +278,7 @@ The `renderAlignment` function SHALL return a `ViewerHandle` object providing li
 
 #### Scenario: Render alignment with annotations
 - **WHEN** `renderAlignment` is called with an `AnnotationMap` parameter
-- **THEN** system sets up annotation rendering, feature tooltips, and sequence navigator shortcut (Ctrl+I), updating annotations on zoom/pan changes
+- **THEN** system sets up annotation rendering, feature tooltips, and sequence navigator shortcut (Ctrl+G), updating annotations on zoom/pan changes
 
 #### Scenario: Annotations update on zoom
 - **WHEN** the zoom transform changes and annotations are present
@@ -464,7 +464,7 @@ The system SHALL compute and display unaligned genomic regions — regions not c
 - **THEN** `computeUnalignedRegions` returns gaps at 1–99, 501–799, and 1201–2000
 
 ### Requirement: Keyboard shortcuts help panel
-The system SHALL display a keyboard shortcuts help panel in the controls bar above the alignment SVG. The help panel SHALL consist of a circular "?" button (`aria-label="Keyboard shortcuts"`, `title="Keyboard shortcuts (?)"`) and a toggleable floating box listing all keyboard shortcuts. The shortcuts list SHALL be rendered as a definition list (`<dl>`) with each shortcut showing key bindings in `<kbd>` elements and a description. The listed shortcuts SHALL include: Ctrl+Up (Zoom in), Ctrl+Down (Zoom out), Ctrl+Left (Pan left), Ctrl+Right (Pan right), Ctrl+Shift+Left/Right (Pan faster), Ctrl+E (Export image), Ctrl+P (Print), Ctrl+I (Sequence navigator), Escape (Close dialog / clear selection), and ? (Toggle this help). Pressing the "?" key (without Ctrl, Alt, or Meta modifiers) SHALL toggle the help box visibility. The "?" keydown handler SHALL be ignored when the active element is an INPUT, TEXTAREA, or SELECT to avoid interfering with form input. Clicking outside the shortcuts help wrapper SHALL close the help box. The `ShortcutsHelpHandle.destroy()` method SHALL remove the keydown and click event listeners and remove the wrapper element from the DOM. The shortcuts help button SHALL be the first element appended to the controls bar.
+The system SHALL display a keyboard shortcuts help panel in the controls bar above the alignment SVG. The help panel SHALL consist of a circular "?" button (`aria-label="Keyboard shortcuts"`, `title="Keyboard shortcuts (?)"`) and a toggleable floating box listing all keyboard shortcuts. The shortcuts list SHALL be rendered as a definition list (`<dl>`) with each shortcut showing key bindings in `<kbd>` elements and a description. The listed shortcuts SHALL include: Ctrl+Up (Zoom in), Ctrl+Down (Zoom out), Ctrl+Left (Pan left), Ctrl+Right (Pan right), Ctrl+Shift+Left/Right (Pan faster), Ctrl+E (Export image), Ctrl+P (Print), Ctrl+G (Sequence navigator), Escape (Close dialog / clear selection), and ? (Toggle this help). Pressing the "?" key (without Ctrl, Alt, or Meta modifiers) SHALL toggle the help box visibility. The "?" keydown handler SHALL be ignored when the active element is an INPUT, TEXTAREA, or SELECT to avoid interfering with form input. Clicking outside the shortcuts help wrapper SHALL close the help box. The `ShortcutsHelpHandle.destroy()` method SHALL remove the keydown and click event listeners and remove the wrapper element from the DOM. The shortcuts help button SHALL be the first element appended to the controls bar.
 
 **Module**: `src/viewer/interaction/shortcuts-help.ts`
 

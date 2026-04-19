@@ -26,7 +26,7 @@ Quick reference for all keyboard shortcuts in Mauve Viewer. Press **?** to toggl
 
 | Shortcut | Action |
 |----------|--------|
-| Ctrl + I | Open Sequence Navigator |
+| Ctrl + G | Open Sequence Navigator |
 | Ctrl + E | Export image |
 | Ctrl + P | Print |
 | ? | Toggle keyboard shortcuts help |

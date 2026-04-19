@@ -13,7 +13,7 @@ const SHORTCUTS: readonly ShortcutDef[] = [
   { keys: 'Ctrl + Shift + Left/Right', description: 'Pan faster' },
   { keys: 'Ctrl + E', description: 'Export image' },
   { keys: 'Ctrl + P', description: 'Print' },
-  { keys: 'Ctrl + I', description: 'Sequence navigator' },
+  { keys: 'Ctrl + G', description: 'Sequence navigator' },
   { keys: 'Escape', description: 'Close dialog / clear selection' },
   { keys: '?', description: 'Toggle this help' },
 ];
