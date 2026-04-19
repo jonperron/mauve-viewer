@@ -1,8 +1,7 @@
-# region-selection Specification
+# region-selection Delta Spec
 
-## Purpose
-TBD - created by archiving change advanced-features. Update Purpose after archive.
-## Requirements
+## MODIFIED Requirements
+
 ### Requirement: Region selection via Shift+click+drag
 The system SHALL allow the user to select a genomic region by holding Shift and clicking+dragging on any visible genome panel. During the drag, the system SHALL render a highlighted rectangle (light blue fill with blue border) on the source panel. On drag completion (minimum 5px drag distance), the system SHALL compute the selected genomic coordinates using `pixelToPosition` and render persistent selection highlights on the source panel (solid border) and corresponding visual-range highlights (dashed border) on all other visible panels. The highlights SHALL remain visible until the user explicitly clears them. An optional `RegionSelectCallback` MAY be invoked with the selection data on completion if provided to `setupRegionSelection`. Shift+clicking (drag distance < 5px) while a selection is active SHALL clear the current selection and remove all highlight rectangles. Pressing the Escape key while a region is selected SHALL clear the selection.
 
@@ -34,23 +33,7 @@ The system SHALL allow the user to select a genomic region by holding Shift and 
 - **WHEN** user completes a Shift+drag region selection in the default viewer
 - **THEN** the viewer does NOT automatically zoom to the selected region; the current zoom transform is unchanged
 
-### Requirement: RegionSelectionHandle lifecycle
-The `setupRegionSelection` function SHALL return a `RegionSelectionHandle` exposing: `update(state)` to refresh state and re-render highlights, `rebuildOverlays(state)` to resize the drag overlay and re-render highlights, `clearSelection()` to clear the current selection, `getSelection()` to retrieve the current `SelectedRegion` or `undefined`, and `destroy()` to remove all event listeners and SVG elements.
-
-#### Scenario: Obtain region selection handle
-- **WHEN** `setupRegionSelection` is called with an SVG, state, and config
-- **THEN** it returns a `RegionSelectionHandle` with `update`, `rebuildOverlays`, `clearSelection`, `getSelection`, and `destroy` methods
-
-#### Scenario: Cleanup on destroy
-- **WHEN** `destroy()` is called on the `RegionSelectionHandle`
-- **THEN** system removes all mousedown/mousemove/mouseup event listeners and the selection group and drag overlay SVG elements
-
-### Requirement: Hidden genomes excluded from selection
-The system SHALL not allow Shift+click+drag on hidden genome panels. The drag overlay SHALL only cover the height of visible panels.
-
-#### Scenario: Cannot select on hidden genome
-- **WHEN** user attempts to Shift+drag on a hidden genome's collapsed bar
-- **THEN** system does not initiate a region selection
+## ADDED Requirements
 
 ### Requirement: Default viewer does not wire onSelect callback
 In the default `alignment-viewer.ts` setup, `setupRegionSelection` SHALL be called without an `onSelect` callback. The selection is purely visual (persistent highlight). Callers MAY provide their own `onSelect` callback for custom behavior.
@@ -58,4 +41,3 @@ In the default `alignment-viewer.ts` setup, `setupRegionSelection` SHALL be call
 #### Scenario: Default viewer setup
 - **WHEN** the alignment viewer initializes region selection
 - **THEN** `setupRegionSelection` is called without an `onSelect` callback and selection highlights are persistent with no side effects
-
