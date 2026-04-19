@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { spawn as defaultSpawn, type ChildProcess, type SpawnOptionsWithoutStdio } from 'node:child_process';
+import { spawn as defaultSpawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
 import {
   mkdir as defaultMkdir,
   writeFile as defaultWriteFile,
@@ -17,7 +17,7 @@ import { buildCommand } from './command-builder.js';
 
 /** I/O functions injected for testability. Defaults to Node.js built-ins. */
 export interface JobManagerIO {
-  readonly spawn: (cmd: string, args: readonly string[], opts: SpawnOptionsWithoutStdio) => ChildProcess;
+  readonly spawn: (cmd: string, args: readonly string[], opts: SpawnOptions) => ChildProcess;
   readonly mkdir: typeof defaultMkdir;
   readonly writeFile: typeof defaultWriteFile;
   readonly readFile: typeof defaultReadFile;

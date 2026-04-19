@@ -263,7 +263,7 @@ describe('JobManager.getResult', () => {
     const xmfa = '#FormatVersion Mauve1\n=';
     const mockProc = createMockProcess();
     io.spawn.mockReturnValue(mockProc as never);
-    io.readFile.mockResolvedValue(xmfa);
+    (io.readFile as ReturnType<typeof vi.fn>).mockResolvedValue(xmfa);
 
     const jobId = await manager.submit(validRequest);
     mockProc.emit('close', 0);

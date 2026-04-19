@@ -336,6 +336,98 @@
       text-decoration: none;
       cursor: pointer;
     }
+    /* Alignment dialog */
+    .alignment-dialog {
+      border: none;
+      border-radius: 8px;
+      padding: 0;
+      max-width: 540px;
+      width: 90vw;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+    }
+    .alignment-dialog::backdrop {
+      background: rgba(0,0,0,0.4);
+    }
+    .alignment-dialog .export-dialog-content {
+      box-shadow: none;
+    }
+    .alignment-dialog .alignment-dialog-content {
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .align-fieldset {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .align-fieldset legend {
+      font-size: 13px;
+      font-weight: 600;
+      padding: 0 4px;
+    }
+    .align-seq-list {
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    .align-seq-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .align-seq-name {
+      flex: 1;
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .align-seq-format {
+      width: 90px;
+      height: 26px;
+      font-size: 12px;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+    }
+    .align-seq-remove {
+      background: none;
+      border: none;
+      color: #c00;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 2px 6px;
+    }
+    .align-seq-remove:hover {
+      background: #fee;
+      border-radius: 4px;
+    }
+    .align-seq-drop-zone {
+      border: 2px dashed #bbb;
+      border-radius: 4px;
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 13px;
+      color: #888;
+      margin-top: 8px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .align-seq-drop-zone:hover,
+    .align-drop-active {
+      border-color: #4a90d9;
+      background: #f0f6ff;
+    }
+    .align-seq-file-input {
+      display: none;
+    }
+    .align-seq-count {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
     /* Sequence navigator */
     .sequence-navigator {
       position: fixed;
