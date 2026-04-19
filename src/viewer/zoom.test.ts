@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { setupZoom } from './zoom.ts';
+import { setupZoom, computeRegionZoomTransform } from './zoom.ts';
 import { createViewerState } from './viewer-state.ts';
 import type { ViewerState } from './viewer-state.ts';
 import type { XmfaAlignment } from '../import/xmfa/types.ts';
@@ -325,5 +325,46 @@ describe('setupZoom', () => {
     expect(transforms.length).toBe(0);
 
     handle.destroy();
+  });
+});
+
+describe('computeRegionZoomTransform', () => {
+  const innerWidth = 880;
+  const genomeLength = 1000;
+  const baseScale = d3.scaleLinear().domain([0, genomeLength]).range([1, innerWidth + 1]);
+
+  it('should compute a transform that maps the region to the viewport', () => {
+    const transform = computeRegionZoomTransform(baseScale, innerWidth, 200, 600);
+    expect(transform).toBeDefined();
+
+    // The zoomed scale should map start→~0 and end→~innerWidth
+    const zoomed = transform!.rescaleX(baseScale);
+    expect(zoomed(200)).toBeCloseTo(0, 0);
+    expect(zoomed(600)).toBeCloseTo(innerWidth, 0);
+  });
+
+  it('should return scale of 1 for the full genome', () => {
+    const transform = computeRegionZoomTransform(baseScale, innerWidth, 0, genomeLength);
+    expect(transform).toBeDefined();
+    expect(transform!.k).toBeCloseTo(1, 1);
+  });
+
+  it('should increase scale for smaller regions', () => {
+    const half = computeRegionZoomTransform(baseScale, innerWidth, 0, 500);
+    const quarter = computeRegionZoomTransform(baseScale, innerWidth, 0, 250);
+    expect(half).toBeDefined();
+    expect(quarter).toBeDefined();
+    expect(quarter!.k).toBeGreaterThan(half!.k);
+  });
+
+  it('should clamp to maxScale', () => {
+    const transform = computeRegionZoomTransform(baseScale, innerWidth, 490, 510, 10);
+    expect(transform).toBeDefined();
+    expect(transform!.k).toBeLessThanOrEqual(10);
+  });
+
+  it('should return undefined for degenerate region (<1px span)', () => {
+    const transform = computeRegionZoomTransform(baseScale, innerWidth, 500, 500);
+    expect(transform).toBeUndefined();
   });
 });

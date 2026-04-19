@@ -30,6 +30,7 @@ export interface ZoomHandle {
   readonly panLeft: () => void;
   readonly panRight: () => void;
   readonly reset: () => void;
+  readonly applyTransform: (transform: d3.ZoomTransform) => void;
 }
 
 /**
@@ -168,5 +169,27 @@ export function setupZoom(
     panLeft,
     panRight,
     reset,
+    applyTransform,
   };
+}
+
+/**
+ * Compute a zoom transform that fits a genomic region into the viewport.
+ * Returns undefined when the region is too small to produce a valid transform.
+ */
+export function computeRegionZoomTransform(
+  baseScale: d3.ScaleLinear<number, number>,
+  innerWidth: number,
+  start: number,
+  end: number,
+  maxScale: number = DEFAULT_ZOOM_CONFIG.maxScale,
+): d3.ZoomTransform | undefined {
+  const p1 = baseScale(start);
+  const p2 = baseScale(end);
+  const pixelSpan = p2 - p1;
+  if (pixelSpan < 1) return undefined;
+
+  const k = Math.min(innerWidth / pixelSpan, maxScale);
+  const tx = -k * p1;
+  return d3.zoomIdentity.translate(tx, 0).scale(k);
 }
