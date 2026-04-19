@@ -8,6 +8,7 @@
     "build": "vite build && tsc -p tsconfig.server.json",
     "build:client": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
+    "serve": "npm run build && node dist/server/index.js",
     "start": "node dist/server/index.js",
     "lint": "eslint .",
     "test": "vitest run"
@@ -26,6 +27,7 @@
   },
   "dependencies": {
     "@fastify/static": "~9.1.1",
+    "@fastify/websocket": "~11.2.0",
     "d3": "~7.9.0",
     "fastify": "~5.8.5"
   }

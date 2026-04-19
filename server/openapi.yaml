@@ -1,0 +1,428 @@
+openapi: 3.0.3
+info:
+  title: Mauve Viewer API
+  description: REST API for the Mauve genome alignment viewer. Provides health checks, alignment job management, and real-time progress streaming.
+  version: 0.1.0
+  license:
+    name: GPL-3.0-or-later
+    url: https://www.gnu.org/licenses/gpl-3.0.html
+
+servers:
+  - url: /
+    description: Same-origin server
+
+security: []
+
+tags:
+  - name: health
+    description: Server health monitoring
+  - name: alignment
+    description: Genome alignment job management
+
+paths:
+  /api/health:
+    get:
+      tags: [health]
+      summary: Health check
+      description: Returns a simple status object indicating the server is running.
+      operationId: getHealth
+      responses:
+        "200":
+          description: Server is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        default:
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/align:
+    post:
+      tags: [alignment]
+      summary: Submit alignment job
+      description: >
+        Submits a new genome alignment job. Requires at least two input sequences
+        and a valid algorithm selection. The job is queued and processed
+        asynchronously. Returns the assigned job ID.
+      operationId: submitAlignment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlignmentRequest"
+      responses:
+        "201":
+          description: Job created and queued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlignmentJobCreated"
+        "400":
+          description: Invalid request — missing or malformed fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                tooFewSequences:
+                  summary: Fewer than two sequences
+                  value:
+                    error: At least two sequences are required
+                missingAlgorithm:
+                  summary: Missing algorithm
+                  value:
+                    error: Algorithm selection is required
+                invalidAlgorithm:
+                  summary: Unknown algorithm
+                  value:
+                    error: Invalid algorithm
+                missingSeqFields:
+                  summary: Sequence missing required fields
+                  value:
+                    error: "Each sequence must have name, content, and format"
+                invalidFormat:
+                  summary: Unsupported sequence format
+                  value:
+                    error: "Invalid sequence format: xyz"
+
+  /api/align/{jobId}/status:
+    get:
+      tags: [alignment]
+      summary: Get job status
+      description: Returns the current status of an alignment job, including progress text and any error message.
+      operationId: getAlignmentStatus
+      parameters:
+        - $ref: "#/components/parameters/jobId"
+      responses:
+        "200":
+          description: Job status retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlignmentJobStatusResponse"
+        "404":
+          description: Job not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: Job not found
+
+  /api/align/{jobId}:
+    delete:
+      tags: [alignment]
+      summary: Cancel alignment job
+      description: >
+        Cancels a running or queued alignment job. Sends SIGTERM to the
+        alignment process if running. Returns 204 on success, 409 if the job
+        is already completed, failed, or cancelled.
+      operationId: cancelAlignment
+      parameters:
+        - $ref: "#/components/parameters/jobId"
+      responses:
+        "204":
+          description: Job cancelled successfully.
+        "409":
+          description: Job cannot be cancelled (already finished).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: Job cannot be cancelled
+
+  /api/align/{jobId}/result:
+    get:
+      tags: [alignment]
+      summary: Download alignment result
+      description: >
+        Returns the XMFA alignment output for a completed job. Only available
+        after the job reaches the `completed` status.
+      operationId: getAlignmentResult
+      parameters:
+        - $ref: "#/components/parameters/jobId"
+      responses:
+        "200":
+          description: Alignment result in XMFA format.
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: XMFA-formatted alignment output.
+                example: |
+                  #FormatVersion Mauve1
+                  > 1:1-1000 + genome1.fasta
+                  ATCGATCG
+                  =
+        "404":
+          description: Result not available (job not completed or not found).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: Result not available
+
+  /api/align/{jobId}/progress:
+    get:
+      tags: [alignment]
+      summary: Stream alignment progress
+      description: >
+        WebSocket endpoint for real-time progress updates on an alignment job.
+        The client must send a WebSocket upgrade request. The server pushes
+        `AlignmentProgressEvent` JSON messages as the alignment progresses.
+        The connection closes automatically when the job completes, fails, or
+        is cancelled (close code 1000). If the job is not found, the connection
+        closes immediately with code 4004.
+      operationId: subscribeToProgress
+      parameters:
+        - $ref: "#/components/parameters/jobId"
+      responses:
+        "101":
+          description: >
+            WebSocket upgrade accepted. Server streams `AlignmentProgressEvent`
+            JSON messages. See the schema for event structure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlignmentProgressEvent"
+        "404":
+          description: Job not found — connection closed with code 4004.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: Job not found
+
+components:
+  parameters:
+    jobId:
+      name: jobId
+      in: path
+      required: true
+      description: Unique identifier of the alignment job.
+      schema:
+        type: string
+        format: uuid
+        example: 550e8400-e29b-41d4-a716-446655440000
+
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          description: Server health status.
+          enum: [ok]
+          example: ok
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Human-readable error message.
+          example: Job not found
+
+    AlignmentSequenceInput:
+      type: object
+      description: An input genome sequence for alignment.
+      required: [name, content, format]
+      properties:
+        name:
+          type: string
+          description: Original filename of the sequence.
+          example: genome1.fasta
+        content:
+          type: string
+          description: Full text content of the sequence file.
+          example: ">genome1\nATCGATCGATCG"
+        format:
+          type: string
+          description: File format of the sequence.
+          enum: [fasta, genbank, embl, raw]
+          example: fasta
+
+    BaseAlignmentParams:
+      type: object
+      description: Parameters shared by all alignment algorithms.
+      required: [algorithm, seedWeight, collinear, fullAlignment]
+      properties:
+        algorithm:
+          $ref: "#/components/schemas/AlignmentAlgorithm"
+        seedWeight:
+          description: Seed weight for anchor detection. Use `auto` for automatic selection based on genome size.
+          oneOf:
+            - type: integer
+              minimum: 1
+            - type: string
+              enum: [auto]
+          example: auto
+        minLcbWeight:
+          type: number
+          minimum: 0
+          description: Minimum LCB weight threshold. LCBs below this weight are discarded.
+          example: 200
+        collinear:
+          type: boolean
+          description: Assume collinear genomes (no rearrangements).
+          example: false
+        fullAlignment:
+          type: boolean
+          description: Compute a full gapped alignment (not just anchors).
+          example: true
+
+    AlignmentAlgorithm:
+      type: string
+      description: Alignment algorithm to use.
+      enum: [mauveAligner, progressiveMauve]
+      example: progressiveMauve
+
+    MauveAlignerParams:
+      description: Parameters for the original mauveAligner algorithm.
+      allOf:
+        - $ref: "#/components/schemas/BaseAlignmentParams"
+        - type: object
+          required: [algorithm, extendLcbs]
+          properties:
+            algorithm:
+              type: string
+              enum: [mauveAligner]
+            extendLcbs:
+              type: boolean
+              description: Extend LCBs to cover adjacent ungapped regions.
+              example: true
+            islandSize:
+              type: integer
+              minimum: 1
+              description: Minimum island size for island detection.
+              example: 50
+            backboneSize:
+              type: integer
+              minimum: 1
+              description: Minimum backbone segment size.
+              example: 50
+            maxBackboneGap:
+              type: integer
+              minimum: 0
+              description: Maximum gap allowed within a backbone segment.
+              example: 100
+
+    ProgressiveMauveParams:
+      description: Parameters for the progressiveMauve algorithm.
+      allOf:
+        - $ref: "#/components/schemas/BaseAlignmentParams"
+        - type: object
+          required: [algorithm, seedFamilies, iterativeRefinement, sumOfPairsScoring]
+          properties:
+            algorithm:
+              type: string
+              enum: [progressiveMauve]
+            seedFamilies:
+              type: boolean
+              description: Use seed families for improved sensitivity.
+              example: false
+            iterativeRefinement:
+              type: boolean
+              description: Apply iterative alignment refinement.
+              example: true
+            sumOfPairsScoring:
+              type: boolean
+              description: Use sum-of-pairs scoring instead of ancestral scoring.
+              example: true
+
+    AlignmentParams:
+      description: >
+        Union of alignment algorithm parameters. Use `algorithm` as the
+        discriminator to determine which parameter set applies.
+      discriminator:
+        propertyName: algorithm
+        mapping:
+          mauveAligner: "#/components/schemas/MauveAlignerParams"
+          progressiveMauve: "#/components/schemas/ProgressiveMauveParams"
+      oneOf:
+        - $ref: "#/components/schemas/MauveAlignerParams"
+        - $ref: "#/components/schemas/ProgressiveMauveParams"
+
+    AlignmentRequest:
+      type: object
+      description: Request body for submitting a new alignment job.
+      required: [sequences, params]
+      properties:
+        sequences:
+          type: array
+          description: Input genome sequences. At least two are required.
+          minItems: 2
+          items:
+            $ref: "#/components/schemas/AlignmentSequenceInput"
+        params:
+          $ref: "#/components/schemas/AlignmentParams"
+
+    AlignmentJobStatus:
+      type: string
+      description: Lifecycle state of an alignment job.
+      enum: [queued, running, completed, failed, cancelled]
+      example: running
+
+    AlignmentJobCreated:
+      type: object
+      description: Response returned when an alignment job is successfully created.
+      required: [jobId, status]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+          description: Unique identifier assigned to the new job.
+          example: 550e8400-e29b-41d4-a716-446655440000
+        status:
+          $ref: "#/components/schemas/AlignmentJobStatus"
+
+    AlignmentJobStatusResponse:
+      type: object
+      description: Full status information for an alignment job.
+      required: [jobId, status]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+          description: Unique identifier of the job.
+          example: 550e8400-e29b-41d4-a716-446655440000
+        status:
+          $ref: "#/components/schemas/AlignmentJobStatus"
+        progress:
+          type: string
+          description: Latest progress message from the alignment process.
+          example: "Anchoring with seed weight 15..."
+        error:
+          type: string
+          description: Error message if the job failed.
+          example: "Process exited with code 1"
+
+    AlignmentProgressEvent:
+      type: object
+      description: A real-time progress event sent over the WebSocket connection.
+      required: [jobId, type]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+          description: Identifier of the job this event relates to.
+          example: 550e8400-e29b-41d4-a716-446655440000
+        type:
+          type: string
+          description: Type of progress event.
+          enum: [progress, completed, failed, cancelled]
+          example: progress
+        message:
+          type: string
+          description: Human-readable progress or error message.
+          example: "Computing LCBs..."
