@@ -6,20 +6,12 @@ export interface OptionsState {
   readonly showContigs: boolean;
 }
 
-/** Callbacks triggered when an option is toggled or an action is invoked */
+/** Callbacks triggered when an option is toggled */
 export interface OptionsCallbacks {
   readonly onToggleGenomeId: (enabled: boolean) => void;
   readonly onToggleConnectingLines: (enabled: boolean) => void;
   readonly onToggleFeatures: (enabled: boolean) => void;
   readonly onToggleContigs: (enabled: boolean) => void;
-  readonly onExportImage?: () => void;
-  readonly onExportSnps?: () => void;
-  readonly onExportGaps?: () => void;
-  readonly onExportPermutations?: () => void;
-  readonly onExportHomologs?: () => void;
-  readonly onExportIdentityMatrix?: () => void;
-  readonly onExportCdsErrors?: () => void;
-  readonly onPrint?: () => void;
 }
 
 /** Handle returned by createOptionsPanel for lifecycle management */
@@ -37,7 +29,7 @@ export const DEFAULT_OPTIONS: Readonly<OptionsState> = Object.freeze({
   showContigs: true,
 });
 
-/** Required toggle callback keys (always defined) */
+/** Toggle callback keys */
 type ToggleCallbackKey = 'onToggleGenomeId' | 'onToggleConnectingLines' | 'onToggleFeatures' | 'onToggleContigs';
 
 interface CheckboxDef {
@@ -97,111 +89,10 @@ export function createOptionsPanel(
     dropdown.appendChild(wrapper);
   }
 
-  // Action buttons (separator + buttons)
-  if (callbacks.onExportImage || callbacks.onExportSnps || callbacks.onExportGaps || callbacks.onExportPermutations || callbacks.onExportHomologs || callbacks.onExportIdentityMatrix || callbacks.onExportCdsErrors || callbacks.onPrint) {
-    const separator = document.createElement('hr');
-    separator.className = 'options-separator';
-    dropdown.appendChild(separator);
-
-    if (callbacks.onExportImage) {
-      const exportBtn = document.createElement('button');
-      exportBtn.type = 'button';
-      exportBtn.className = 'options-action-btn';
-      exportBtn.textContent = 'Export Image (Ctrl+E)';
-      exportBtn.addEventListener('click', () => {
-        dropdown.classList.remove('show');
-        callbacks.onExportImage?.();
-      });
-      dropdown.appendChild(exportBtn);
-    }
-
-    if (callbacks.onExportSnps) {
-      const snpBtn = document.createElement('button');
-      snpBtn.type = 'button';
-      snpBtn.className = 'options-action-btn';
-      snpBtn.textContent = 'Export SNPs';
-      snpBtn.addEventListener('click', () => {
-        dropdown.classList.remove('show');
-        callbacks.onExportSnps?.();
-      });
-      dropdown.appendChild(snpBtn);
-    }
-
-    if (callbacks.onExportGaps) {
-      const gapBtn = document.createElement('button');
-      gapBtn.type = 'button';
-      gapBtn.className = 'options-action-btn';
-      gapBtn.textContent = 'Export Gaps';
-      gapBtn.addEventListener('click', () => {
-        dropdown.classList.remove('show');
-        callbacks.onExportGaps?.();
-      });
-      dropdown.appendChild(gapBtn);
-    }
-
-    if (callbacks.onExportPermutations) {
-      const permBtn = document.createElement('button');
-      permBtn.type = 'button';
-      permBtn.className = 'options-action-btn';
-      permBtn.textContent = 'Export Permutations';
-      permBtn.addEventListener('click', () => {
-        dropdown.classList.remove('show');
-        callbacks.onExportPermutations?.();
-      });
-      dropdown.appendChild(permBtn);
-    }
-
-    if (callbacks.onExportHomologs) {
-      const homologBtn = document.createElement('button');
-      homologBtn.type = 'button';
-      homologBtn.className = 'options-action-btn';
-      homologBtn.textContent = 'Export Positional Orthologs';
-      homologBtn.addEventListener('click', () => {
-        dropdown.classList.remove('show');
-        callbacks.onExportHomologs?.();
-      });
-      dropdown.appendChild(homologBtn);
-    }
-
-    if (callbacks.onExportIdentityMatrix) {
-      const matrixBtn = document.createElement('button');
-      matrixBtn.type = 'button';
-      matrixBtn.className = 'options-action-btn';
-      matrixBtn.textContent = 'Export Identity Matrix';
-      matrixBtn.addEventListener('click', () => {
-        dropdown.classList.remove('show');
-        callbacks.onExportIdentityMatrix?.();
-      });
-      dropdown.appendChild(matrixBtn);
-    }
-
-    if (callbacks.onExportCdsErrors) {
-      const cdsBtn = document.createElement('button');
-      cdsBtn.type = 'button';
-      cdsBtn.className = 'options-action-btn';
-      cdsBtn.textContent = 'Export CDS Errors';
-      cdsBtn.addEventListener('click', () => {
-        dropdown.classList.remove('show');
-        callbacks.onExportCdsErrors?.();
-      });
-      dropdown.appendChild(cdsBtn);
-    }
-
-    if (callbacks.onPrint) {
-      const printBtn = document.createElement('button');
-      printBtn.type = 'button';
-      printBtn.className = 'options-action-btn';
-      printBtn.textContent = 'Print (Ctrl+P)';
-      printBtn.addEventListener('click', () => {
-        dropdown.classList.remove('show');
-        callbacks.onPrint?.();
-      });
-      dropdown.appendChild(printBtn);
-    }
-  }
-
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
+    // Close sibling dropdowns (e.g. export menu)
+    panel.parentElement?.querySelectorAll('.export-menu-dropdown.show').forEach((el) => el.classList.remove('show'));
     dropdown.classList.toggle('show');
   });
 

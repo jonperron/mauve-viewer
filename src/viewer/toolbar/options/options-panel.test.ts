@@ -187,82 +187,11 @@ describe('createOptionsPanel', () => {
     expect(dropdown.classList.contains('show')).toBe(false);
   });
 
-  it('renders export image button when callback provided', () => {
-    document.body.innerHTML = '';
-    const c = createContainer();
-    const cb = { ...createCallbacks(), onExportImage: vi.fn() };
-    createOptionsPanel(c, cb);
-
-    const btn = c.querySelector('.options-action-btn');
-    expect(btn).not.toBeNull();
-    expect(btn!.textContent).toContain('Export Image');
-  });
-
-  it('renders print button when callback provided', () => {
-    document.body.innerHTML = '';
-    const c = createContainer();
-    const cb = { ...createCallbacks(), onPrint: vi.fn() };
-    createOptionsPanel(c, cb);
-
-    const btns = c.querySelectorAll('.options-action-btn');
-    const printBtn = Array.from(btns).find((b) => b.textContent?.includes('Print'));
-    expect(printBtn).toBeDefined();
-  });
-
-  it('calls onExportImage and closes dropdown when export button clicked', () => {
-    document.body.innerHTML = '';
-    const c = createContainer();
-    const onExportImage = vi.fn();
-    const cb = { ...createCallbacks(), onExportImage };
-    createOptionsPanel(c, cb);
-
-    const toggle = c.querySelector<HTMLButtonElement>('.options-toggle')!;
-    toggle.click();
-    const dropdown = c.querySelector('.options-dropdown')!;
-    expect(dropdown.classList.contains('show')).toBe(true);
-
-    const exportBtn = c.querySelector<HTMLButtonElement>('.options-action-btn')!;
-    exportBtn.click();
-
-    expect(onExportImage).toHaveBeenCalledOnce();
-    expect(dropdown.classList.contains('show')).toBe(false);
-  });
-
-  it('calls onPrint and closes dropdown when print button clicked', () => {
-    document.body.innerHTML = '';
-    const c = createContainer();
-    const onPrint = vi.fn();
-    const cb = { ...createCallbacks(), onPrint };
-    createOptionsPanel(c, cb);
-
-    const toggle = c.querySelector<HTMLButtonElement>('.options-toggle')!;
-    toggle.click();
-
-    const btns = c.querySelectorAll<HTMLButtonElement>('.options-action-btn');
-    const printBtn = Array.from(btns).find((b) => b.textContent?.includes('Print'))!;
-    printBtn.click();
-
-    expect(onPrint).toHaveBeenCalledOnce();
-  });
-
-  it('does not render action buttons when no action callbacks provided', () => {
+  it('does not render action buttons (exports moved to export menu)', () => {
     const btns = container.querySelectorAll('.options-action-btn');
     expect(btns.length).toBe(0);
 
     const separator = container.querySelector('.options-separator');
     expect(separator).toBeNull();
-  });
-
-  it('renders separator before action buttons', () => {
-    document.body.innerHTML = '';
-    const c = createContainer();
-    const cb = { ...createCallbacks(), onExportImage: vi.fn(), onPrint: vi.fn() };
-    createOptionsPanel(c, cb);
-
-    const separator = c.querySelector('.options-separator');
-    expect(separator).not.toBeNull();
-
-    const btns = c.querySelectorAll('.options-action-btn');
-    expect(btns.length).toBe(2);
   });
 });

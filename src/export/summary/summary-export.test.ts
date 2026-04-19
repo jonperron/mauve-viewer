@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { BackboneSegment } from '../../import/backbone/types.ts';
 import type { Lcb, Genome, XmfaAlignment } from '../../import/xmfa/types.ts';
 import type { GenomeAnnotations, GenomicFeature } from '../../annotations/types.ts';
-import { runSummaryPipeline, exportSummary } from './summary-export.ts';
+import { runSummaryPipeline, exportSummary, buildSummaryBlobUrl } from './summary-export.ts';
 import { extractPartialFasta } from './partial-fasta.ts';
 import { formatTroubleBackbone, findTroubleBackbone } from './trouble-backbone.ts';
 import { formatIslandCoordinates, formatIslandFeatures, formatIslandGeneFeatures } from './island-output.ts';
@@ -349,14 +349,17 @@ describe('runSummaryPipeline', () => {
 // ── exportSummary tests ──────────────────────────────────────────────────────
 
 describe('exportSummary', () => {
-  it('downloads all output files', () => {
-    // Mock DOM elements needed by downloadTextFile
+  it('downloads a single ZIP file with all outputs', () => {
+    vi.useFakeTimers();
+    // Mock DOM elements needed by downloadZip
     const clickSpy = vi.fn();
-    vi.spyOn(document, 'createElement').mockReturnValue({
+    const anchorMock = {
       href: '',
       download: '',
+      style: { display: '' },
       click: clickSpy,
-    } as unknown as HTMLElement);
+    } as unknown as HTMLAnchorElement;
+    vi.spyOn(document, 'createElement').mockReturnValue(anchorMock as unknown as HTMLElement);
     vi.spyOn(document.body, 'appendChild').mockImplementation((node) => node);
     vi.spyOn(document.body, 'removeChild').mockImplementation((node) => node);
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
@@ -373,10 +376,36 @@ describe('exportSummary', () => {
     const result = runSummaryPipeline({ backboneSegments: backbone, lcbs, genomes, annotations });
     exportSummary(result, 'test');
 
-    // Should have triggered multiple downloads
-    expect(clickSpy).toHaveBeenCalled();
-    // At minimum: overview + islandcoords + problembb = 3, plus per-genome files
-    expect(clickSpy.mock.calls.length).toBeGreaterThanOrEqual(3);
+    // Should trigger exactly one download (the ZIP)
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(anchorMock.download).toBe('test_summary.zip');
+
+    vi.advanceTimersByTime(200);
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+});
+
+// ── buildSummaryBlobUrl tests ─────────────────────────────────────────────────
+
+describe('buildSummaryBlobUrl', () => {
+  it('returns a blob URL, filename, and revoke function', () => {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test-id');
+    const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+
+    const genomes = [makeGenome(0, 1000, 'GenomeA'), makeGenome(1, 1000, 'GenomeB')];
+    const lcbs = [makeLcb(1, [200, 300], [800, 700], [false, false])];
+    const backbone = [makeBackbone(1, [[200, 800], [300, 700]])];
+
+    const result = runSummaryPipeline({ backboneSegments: backbone, lcbs, genomes });
+    const blobResult = buildSummaryBlobUrl(result, 'test');
+
+    expect(blobResult.blobUrl).toBe('blob:test-id');
+    expect(blobResult.filename).toBe('test_summary.zip');
+    expect(typeof blobResult.revoke).toBe('function');
+
+    blobResult.revoke();
+    expect(revokeSpy).toHaveBeenCalledWith('blob:test-id');
 
     vi.restoreAllMocks();
   });

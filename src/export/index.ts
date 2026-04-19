@@ -78,6 +78,11 @@ export type {
 export {
   runSummaryPipeline,
   exportSummary,
+  buildSummaryBlobUrl,
+} from './summary/summary-export.ts';
+
+export type {
+  SummaryBlobResult,
 } from './summary/summary-export.ts';
 
 export {

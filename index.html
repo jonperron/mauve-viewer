@@ -173,6 +173,62 @@
     .options-action-btn:hover {
       background: #e8f0fe;
     }
+    .export-menu {
+      display: inline-block;
+      position: relative;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .export-menu-toggle {
+      height: 32px;
+      padding: 0 12px;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .export-menu-toggle:hover {
+      background: #e0e0e0;
+      border-color: #999;
+    }
+    .export-menu-toggle:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+    .export-menu-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      z-index: 100;
+      min-width: 220px;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      padding: 6px 0;
+      margin-top: 2px;
+    }
+    .export-menu-dropdown.show {
+      display: block;
+    }
+    .export-menu-action-btn {
+      display: block;
+      width: 100%;
+      padding: 6px 12px;
+      border: none;
+      background: none;
+      text-align: left;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      color: #333;
+    }
+    .export-menu-action-btn:hover {
+      background: #e8f0fe;
+    }
     .color-scheme-menu {
       display: inline-block;
       margin-left: 8px;
@@ -255,6 +311,31 @@
     .export-cancel-btn { background: #f5f5f5; }
     .export-confirm-btn { background: #4a90d9; color: #fff; border-color: #3a7bc8; }
     .export-confirm-btn:hover { background: #3a7bc8; }
+    /* Summary export modal (<dialog>) */
+    .summary-export-modal {
+      border: none;
+      border-radius: 8px;
+      padding: 0;
+      max-width: 460px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+    }
+    .summary-export-modal::backdrop {
+      background: rgba(0,0,0,0.4);
+    }
+    .summary-export-modal .export-dialog-content {
+      box-shadow: none;
+    }
+    .summary-export-modal a.export-confirm-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 32px;
+      padding: 0 16px;
+      border-radius: 4px;
+      font-size: 13px;
+      text-decoration: none;
+      cursor: pointer;
+    }
     /* Sequence navigator */
     .sequence-navigator {
       position: fixed;

@@ -29,6 +29,8 @@ import { createFeatureTooltip } from './rendering/feature-tooltip.ts';
 import type { FeatureTooltipHandle } from './rendering/feature-tooltip.ts';
 import { createOptionsPanel } from './toolbar/options/options-panel.ts';
 import type { OptionsPanelHandle, OptionsState } from './toolbar/options/options-panel.ts';
+import { createExportMenu } from './toolbar/options/export-menu.ts';
+import type { ExportMenuHandle } from './toolbar/options/export-menu.ts';
 import { applyColorScheme, getAvailableSchemes, DEFAULT_COLOR_SCHEME_ID } from './toolbar/color-scheme/color-schemes.ts';
 import type { ColorSchemeId } from './toolbar/color-scheme/color-schemes.ts';
 import { createColorSchemeMenu } from './toolbar/color-scheme/color-scheme-menu.ts';
@@ -47,9 +49,11 @@ import { computeMultiLevelProfile } from '../analysis/similarity/compute.ts';
 import type { MultiLevelProfile } from '../analysis/similarity/types.ts';
 import { computeBackbone } from '../analysis/backbone/index.ts';
 import type { BackboneSegment } from '../import/backbone/types.ts';
-import { exportSnps, downloadTextFile, exportGaps, exportPermutations, exportHomologs, exportIdentityMatrix, exportCdsErrors } from '../export/index.ts';
+import { exportSnps, downloadTextFile, exportGaps, exportPermutations, exportHomologs, exportIdentityMatrix, exportCdsErrors, runSummaryPipeline, buildSummaryBlobUrl } from '../export/index.ts';
 import type { ContigMap } from '../export/index.ts';
 import type { ContigBoundary } from '../annotations/types.ts';
+import { createHomologExportDialog } from './toolbar/options/homolog-export-dialog.ts';
+import { createSummaryExportDialog } from './toolbar/options/summary-export-dialog.ts';
 
 export interface ViewerConfig {
   readonly width: number;
@@ -82,6 +86,7 @@ export interface ViewerHandle {
   readonly trackControlsHandle: TrackControlsHandle;
   readonly annotationsHandle: AnnotationsHandle | undefined;
   readonly optionsPanelHandle: OptionsPanelHandle;
+  readonly exportMenuHandle: ExportMenuHandle;
   readonly colorSchemeMenuHandle: ColorSchemeMenuHandle;
   readonly regionSelectionHandle: RegionSelectionHandle;
   readonly getState: () => ViewerState;
@@ -392,6 +397,9 @@ export function renderAlignment(
     },
   );
 
+  // Mutable dialog handle — held in closure for export dialog lifecycle (intentional exception to immutability rule)
+  let activeDialogHandle: { destroy: () => void } | undefined;
+
   const optionsPanelHandle = createOptionsPanel(controlsBar, {
     onToggleGenomeId: (enabled) => {
       optionsState = { ...optionsState, showGenomeId: enabled };
@@ -421,6 +429,9 @@ export function renderAlignment(
         showContigs: enabled,
       });
     },
+  });
+
+  const exportMenuHandle = createExportMenu(controlsBar, {
     onExportImage: () => {
       createImageExportDialog(container, svgNode);
     },
@@ -458,10 +469,14 @@ export function renderAlignment(
       downloadTextFile(content, 'permutations.txt');
     } : undefined,
     onExportHomologs: backbone.length > 0 && annotations && annotations.size > 0 ? () => {
-      const content = exportHomologs(alignment, backbone, annotations!);
-      if (content.length > 0) {
-        downloadTextFile(content, 'positional_orthologs.tsv');
-      }
+      activeDialogHandle?.destroy();
+      activeDialogHandle = createHomologExportDialog(container, (params) => {
+        activeDialogHandle = undefined;
+        const content = exportHomologs(alignment, backbone, annotations!, params);
+        if (content.length > 0) {
+          downloadTextFile(content, 'positional_orthologs.tsv');
+        }
+      });
     } : undefined,
     onExportIdentityMatrix: backbone.length > 0 ? () => {
       const content = exportIdentityMatrix(alignment, backbone);
@@ -472,6 +487,23 @@ export function renderAlignment(
       if (content.length > 0) {
         downloadTextFile(content, 'cds_errors.tsv');
       }
+    } : undefined,
+    onExportSummary: backbone.length > 0 ? () => {
+      activeDialogHandle?.destroy();
+      activeDialogHandle = createSummaryExportDialog(container, (options) => {
+        activeDialogHandle = undefined;
+        const annotationsList = annotations
+          ? Array.from(annotations.values())
+          : [];
+        const result = runSummaryPipeline({
+          backboneSegments: backbone,
+          lcbs,
+          genomes: alignment.genomes,
+          annotations: annotationsList.length > 0 ? annotationsList : undefined,
+          options,
+        });
+        return buildSummaryBlobUrl(result);
+      });
     } : undefined,
     onPrint: () => {
       printAlignment(svgNode);
@@ -510,6 +542,7 @@ export function renderAlignment(
     trackControlsHandle,
     annotationsHandle,
     optionsPanelHandle,
+    exportMenuHandle,
     colorSchemeMenuHandle,
     regionSelectionHandle,
     getState: () => viewerState,
@@ -521,6 +554,7 @@ export function renderAlignment(
       regionSelectionHandle.destroy();
       annotationsHandle?.destroy();
       tooltipHandle?.destroy();
+      exportMenuHandle.destroy();
       colorSchemeMenuHandle.destroy();
       optionsPanelHandle.destroy();
       trackControlsHandle.destroy();
