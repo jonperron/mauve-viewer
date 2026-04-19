@@ -250,7 +250,7 @@ export function createSequenceNavigator(
     destroy();
   });
 
-  // Ctrl+I shortcut to open/focus
+  // Ctrl+G shortcut to open/focus
   function onKeyDown(e: KeyboardEvent): void {
     if (e.key === 'Escape') {
       destroy();
@@ -271,7 +271,7 @@ export function createSequenceNavigator(
 }
 
 /**
- * Set up Ctrl+I keyboard shortcut to open the sequence navigator.
+ * Set up Ctrl+G keyboard shortcut to open the sequence navigator.
  * Returns a cleanup function.
  */
 export function setupNavigatorShortcut(
@@ -288,7 +288,7 @@ export function setupNavigatorShortcut(
   }
 
   function onKeyDown(e: KeyboardEvent): void {
-    if (e.ctrlKey && e.key === 'i') {
+    if (e.ctrlKey && e.key === 'g') {
       e.preventDefault();
       if (navigatorHandle) {
         navigatorHandle.destroy();

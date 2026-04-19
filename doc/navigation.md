@@ -63,7 +63,7 @@ The selection is purely visual and does not trigger automatic zooming.
 
 ## Sequence Navigator
 
-Press **Ctrl + I** to open the Sequence Navigator. This panel is only available when annotation files are loaded alongside the alignment.
+Press **Ctrl + G** to open the Sequence Navigator. This panel is only available when annotation files are loaded alongside the alignment.
 
 ### Find Features Tab
 

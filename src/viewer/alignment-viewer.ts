@@ -516,7 +516,7 @@ export function renderAlignment(
   // Print support (Ctrl+P)
   const cleanupPrint = setupPrintSupport(svgNode);
 
-  // Sequence navigator shortcut (Ctrl+I) — only if annotations are available
+  // Sequence navigator shortcut (Ctrl+G) — only if annotations are available
   const genomeNames = alignment.genomes.map((g) => g.name);
   const cleanupNavigator = annotations?.size
     ? setupNavigatorShortcut(
