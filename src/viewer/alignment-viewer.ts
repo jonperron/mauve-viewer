@@ -29,6 +29,8 @@ import { createFeatureTooltip } from './rendering/feature-tooltip.ts';
 import type { FeatureTooltipHandle } from './rendering/feature-tooltip.ts';
 import { createOptionsPanel } from './toolbar/options/options-panel.ts';
 import type { OptionsPanelHandle, OptionsState } from './toolbar/options/options-panel.ts';
+import { createExportMenu } from './toolbar/options/export-menu.ts';
+import type { ExportMenuHandle } from './toolbar/options/export-menu.ts';
 import { applyColorScheme, getAvailableSchemes, DEFAULT_COLOR_SCHEME_ID } from './toolbar/color-scheme/color-schemes.ts';
 import type { ColorSchemeId } from './toolbar/color-scheme/color-schemes.ts';
 import { createColorSchemeMenu } from './toolbar/color-scheme/color-scheme-menu.ts';
@@ -47,7 +49,7 @@ import { computeMultiLevelProfile } from '../analysis/similarity/compute.ts';
 import type { MultiLevelProfile } from '../analysis/similarity/types.ts';
 import { computeBackbone } from '../analysis/backbone/index.ts';
 import type { BackboneSegment } from '../import/backbone/types.ts';
-import { exportSnps, downloadTextFile, exportGaps, exportPermutations, exportHomologs, exportIdentityMatrix, exportCdsErrors, runSummaryPipeline, exportSummary } from '../export/index.ts';
+import { exportSnps, downloadTextFile, exportGaps, exportPermutations, exportHomologs, exportIdentityMatrix, exportCdsErrors, runSummaryPipeline, buildSummaryBlobUrl } from '../export/index.ts';
 import type { ContigMap } from '../export/index.ts';
 import type { ContigBoundary } from '../annotations/types.ts';
 import { createHomologExportDialog } from './toolbar/options/homolog-export-dialog.ts';
@@ -84,6 +86,7 @@ export interface ViewerHandle {
   readonly trackControlsHandle: TrackControlsHandle;
   readonly annotationsHandle: AnnotationsHandle | undefined;
   readonly optionsPanelHandle: OptionsPanelHandle;
+  readonly exportMenuHandle: ExportMenuHandle;
   readonly colorSchemeMenuHandle: ColorSchemeMenuHandle;
   readonly regionSelectionHandle: RegionSelectionHandle;
   readonly getState: () => ViewerState;
@@ -426,6 +429,9 @@ export function renderAlignment(
         showContigs: enabled,
       });
     },
+  });
+
+  const exportMenuHandle = createExportMenu(controlsBar, {
     onExportImage: () => {
       createImageExportDialog(container, svgNode);
     },
@@ -496,7 +502,7 @@ export function renderAlignment(
           annotations: annotationsList.length > 0 ? annotationsList : undefined,
           options,
         });
-        exportSummary(result);
+        return buildSummaryBlobUrl(result);
       });
     } : undefined,
     onPrint: () => {
@@ -536,6 +542,7 @@ export function renderAlignment(
     trackControlsHandle,
     annotationsHandle,
     optionsPanelHandle,
+    exportMenuHandle,
     colorSchemeMenuHandle,
     regionSelectionHandle,
     getState: () => viewerState,
@@ -547,6 +554,7 @@ export function renderAlignment(
       regionSelectionHandle.destroy();
       annotationsHandle?.destroy();
       tooltipHandle?.destroy();
+      exportMenuHandle.destroy();
       colorSchemeMenuHandle.destroy();
       optionsPanelHandle.destroy();
       trackControlsHandle.destroy();

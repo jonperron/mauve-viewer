@@ -6,21 +6,12 @@ export interface OptionsState {
   readonly showContigs: boolean;
 }
 
-/** Callbacks triggered when an option is toggled or an action is invoked */
+/** Callbacks triggered when an option is toggled */
 export interface OptionsCallbacks {
   readonly onToggleGenomeId: (enabled: boolean) => void;
   readonly onToggleConnectingLines: (enabled: boolean) => void;
   readonly onToggleFeatures: (enabled: boolean) => void;
   readonly onToggleContigs: (enabled: boolean) => void;
-  readonly onExportImage?: () => void;
-  readonly onExportSnps?: () => void;
-  readonly onExportGaps?: () => void;
-  readonly onExportPermutations?: () => void;
-  readonly onExportHomologs?: () => void;
-  readonly onExportIdentityMatrix?: () => void;
-  readonly onExportCdsErrors?: () => void;
-  readonly onExportSummary?: () => void;
-  readonly onPrint?: () => void;
 }
 
 /** Handle returned by createOptionsPanel for lifecycle management */
@@ -38,7 +29,7 @@ export const DEFAULT_OPTIONS: Readonly<OptionsState> = Object.freeze({
   showContigs: true,
 });
 
-/** Required toggle callback keys (always defined) */
+/** Toggle callback keys */
 type ToggleCallbackKey = 'onToggleGenomeId' | 'onToggleConnectingLines' | 'onToggleFeatures' | 'onToggleContigs';
 
 interface CheckboxDef {
@@ -53,30 +44,6 @@ const CHECKBOX_DEFS: readonly CheckboxDef[] = [
   { name: 'showConnectingLines', label: 'LCB Connecting Lines', stateKey: 'showConnectingLines', callbackKey: 'onToggleConnectingLines' },
   { name: 'showFeatures', label: 'Show Features (zoomed)', stateKey: 'showFeatures', callbackKey: 'onToggleFeatures' },
   { name: 'showContigs', label: 'Show Contigs', stateKey: 'showContigs', callbackKey: 'onToggleContigs' },
-];
-
-/** Action callback keys — only the optional () => void members */
-type ActionCallbackKey = {
-  [K in keyof OptionsCallbacks]: OptionsCallbacks[K] extends (() => void) | undefined ? K : never;
-}[keyof OptionsCallbacks];
-
-/** Action button definition for data-driven rendering */
-interface ActionButtonDef {
-  readonly callbackKey: ActionCallbackKey;
-  readonly label: string;
-}
-
-/** Ordered list of action buttons rendered in the options dropdown */
-const ACTION_BUTTON_DEFS: readonly ActionButtonDef[] = [
-  { callbackKey: 'onExportImage', label: 'Export Image (Ctrl+E)' },
-  { callbackKey: 'onExportSnps', label: 'Export SNPs' },
-  { callbackKey: 'onExportGaps', label: 'Export Gaps' },
-  { callbackKey: 'onExportPermutations', label: 'Export Permutations' },
-  { callbackKey: 'onExportHomologs', label: 'Export Positional Orthologs' },
-  { callbackKey: 'onExportIdentityMatrix', label: 'Export Identity Matrix' },
-  { callbackKey: 'onExportCdsErrors', label: 'Export CDS Errors' },
-  { callbackKey: 'onExportSummary', label: 'Export Summary' },
-  { callbackKey: 'onPrint', label: 'Print (Ctrl+P)' },
 ];
 
 /** Create an options panel with toggle checkboxes */
@@ -122,32 +89,10 @@ export function createOptionsPanel(
     dropdown.appendChild(wrapper);
   }
 
-  // Action buttons (separator + buttons) — data-driven rendering
-  const activeButtons = ACTION_BUTTON_DEFS.filter(
-    (def) => callbacks[def.callbackKey] !== undefined,
-  );
-
-  if (activeButtons.length > 0) {
-    const separator = document.createElement('hr');
-    separator.className = 'options-separator';
-    dropdown.appendChild(separator);
-
-    for (const def of activeButtons) {
-      const actionBtn = document.createElement('button');
-      actionBtn.type = 'button';
-      actionBtn.className = 'options-action-btn';
-      actionBtn.textContent = def.label;
-      const callback = callbacks[def.callbackKey];
-      actionBtn.addEventListener('click', () => {
-        dropdown.classList.remove('show');
-        callback?.();
-      });
-      dropdown.appendChild(actionBtn);
-    }
-  }
-
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
+    // Close sibling dropdowns (e.g. export menu)
+    panel.parentElement?.querySelectorAll('.export-menu-dropdown.show').forEach((el) => el.classList.remove('show'));
     dropdown.classList.toggle('show');
   });
 

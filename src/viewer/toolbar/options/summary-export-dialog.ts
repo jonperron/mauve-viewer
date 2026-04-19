@@ -3,29 +3,32 @@ import { DEFAULT_SUMMARY_OPTIONS } from '../../../export/summary/types.ts';
 
 /** Handle for summary export dialog lifecycle */
 export interface SummaryExportDialogHandle {
-  readonly element: HTMLElement;
+  readonly element: HTMLDialogElement;
   readonly destroy: () => void;
 }
 
+/** Callback that builds the blob URL from the chosen options */
+export type SummaryBlobBuilder = (options: Partial<SummaryOptions>) => {
+  readonly blobUrl: string;
+  readonly filename: string;
+  readonly revoke: () => void;
+};
+
 /**
- * Create a configuration dialog for summary pipeline export.
+ * Create a native `<dialog>` modal for summary pipeline export.
  * Shows island/backbone length thresholds, max length ratio, and min percent contained.
- * Calls onConfirm with the chosen options.
+ * When the user clicks Export, the pipeline runs and a real download link appears.
  */
 export function createSummaryExportDialog(
   container: HTMLElement,
-  onConfirm: (options: Partial<SummaryOptions>) => void,
+  buildBlob: SummaryBlobBuilder,
 ): SummaryExportDialogHandle {
-  const dialog = document.createElement('div');
-  dialog.className = 'export-config-dialog';
-  dialog.setAttribute('role', 'dialog');
+  const dialog = document.createElement('dialog');
+  dialog.className = 'summary-export-modal';
   dialog.setAttribute('aria-label', 'Export Summary');
 
-  const backdrop = document.createElement('div');
-  backdrop.className = 'export-config-backdrop';
-
   dialog.innerHTML = `
-    <div class="export-dialog-content">
+    <form method="dialog" class="export-dialog-content">
       <h3>Export Summary</h3>
       <div class="export-field">
         <label for="summary-island-min">Island Min Length (bp):</label>
@@ -47,11 +50,11 @@ export function createSummaryExportDialog(
         <button type="button" class="export-cancel-btn">Cancel</button>
         <button type="button" class="export-confirm-btn">Export</button>
       </div>
-    </div>
+    </form>
   `;
 
-  container.appendChild(backdrop);
   container.appendChild(dialog);
+  dialog.showModal();
 
   const islandMinInput = dialog.querySelector('#summary-island-min') as HTMLInputElement;
   const backboneMinInput = dialog.querySelector('#summary-backbone-min') as HTMLInputElement;
@@ -59,6 +62,10 @@ export function createSummaryExportDialog(
   const minContainedInput = dialog.querySelector('#summary-min-contained') as HTMLInputElement;
   const cancelBtn = dialog.querySelector('.export-cancel-btn') as HTMLButtonElement;
   const confirmBtn = dialog.querySelector('.export-confirm-btn') as HTMLButtonElement;
+  const actionsDiv = dialog.querySelector('.export-actions') as HTMLDivElement;
+
+  // Track blob URL for cleanup
+  let revokeBlob: (() => void) | undefined;
 
   function handleCancel(): void {
     destroy();
@@ -71,24 +78,46 @@ export function createSummaryExportDialog(
       maxLengthRatio: clampNumber(parseFloat(maxRatioInput.value), 0.1, Infinity, DEFAULT_SUMMARY_OPTIONS.maxLengthRatio),
       minimumPercentContained: clampNumber(parseFloat(minContainedInput.value), 0, 1, DEFAULT_SUMMARY_OPTIONS.minimumPercentContained),
     };
-    destroy();
-    onConfirm(options);
+
+    // Run pipeline and build blob
+    const { blobUrl, filename, revoke } = buildBlob(options);
+    revokeBlob = revoke;
+
+    // Replace button area with a real download link
+    const downloadLink = document.createElement('a');
+    downloadLink.href = blobUrl;
+    downloadLink.download = filename;
+    downloadLink.className = 'export-confirm-btn';
+    downloadLink.textContent = `Download ${filename}`;
+    downloadLink.addEventListener('click', () => {
+      // Close dialog shortly after download starts
+      setTimeout(() => destroy(), 100);
+    });
+
+    actionsDiv.replaceChildren(cancelBtn, downloadLink);
   }
 
   cancelBtn.addEventListener('click', handleCancel);
   confirmBtn.addEventListener('click', handleConfirm);
-  backdrop.addEventListener('click', handleCancel);
 
-  function onKeyDown(e: KeyboardEvent): void {
-    if (e.key === 'Escape') {
+  // Close on click outside (backdrop click)
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) {
       handleCancel();
     }
-  }
-  document.addEventListener('keydown', onKeyDown);
+  });
+
+  // Native <dialog> handles Escape via 'cancel' event
+  dialog.addEventListener('cancel', (e) => {
+    e.preventDefault();
+    handleCancel();
+  });
 
   function destroy(): void {
-    document.removeEventListener('keydown', onKeyDown);
-    backdrop.remove();
+    revokeBlob?.();
+    if (dialog.open) {
+      dialog.close();
+    }
     dialog.remove();
   }
 

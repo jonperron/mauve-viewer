@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createSummaryExportDialog } from './summary-export-dialog.ts';
+import type { SummaryBlobBuilder } from './summary-export-dialog.ts';
 import { DEFAULT_SUMMARY_OPTIONS } from '../../../export/summary/types.ts';
 import type { SummaryOptions } from '../../../export/summary/types.ts';
 
@@ -9,34 +10,53 @@ function createContainer(): HTMLElement {
   return div;
 }
 
+function mockBlobBuilder(): SummaryBlobBuilder {
+  return vi.fn(() => ({
+    blobUrl: 'blob:http://localhost/fake-id',
+    filename: 'alignment_summary.zip',
+    revoke: vi.fn(),
+  }));
+}
+
 describe('createSummaryExportDialog', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
     document.body.innerHTML = '';
     container = createContainer();
+    // jsdom doesn't implement showModal — stub it
+    HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
+      this.setAttribute('open', '');
+    };
+    HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) {
+      this.removeAttribute('open');
+    };
   });
 
-  it('creates dialog and backdrop elements', () => {
-    const onConfirm = vi.fn();
-    createSummaryExportDialog(container, onConfirm);
+  it('creates a native <dialog> element', () => {
+    createSummaryExportDialog(container, mockBlobBuilder());
 
-    expect(container.querySelector('.export-config-dialog')).not.toBeNull();
-    expect(container.querySelector('.export-config-backdrop')).not.toBeNull();
+    const dialog = container.querySelector('dialog.summary-export-modal');
+    expect(dialog).not.toBeNull();
+    expect(dialog!.tagName).toBe('DIALOG');
   });
 
-  it('has correct role and aria-label', () => {
-    const onConfirm = vi.fn();
-    createSummaryExportDialog(container, onConfirm);
+  it('opens the dialog as modal', () => {
+    createSummaryExportDialog(container, mockBlobBuilder());
 
-    const dialog = container.querySelector('.export-config-dialog')!;
-    expect(dialog.getAttribute('role')).toBe('dialog');
+    const dialog = container.querySelector('dialog') as HTMLDialogElement;
+    expect(dialog.hasAttribute('open')).toBe(true);
+  });
+
+  it('has correct aria-label', () => {
+    createSummaryExportDialog(container, mockBlobBuilder());
+
+    const dialog = container.querySelector('dialog')!;
     expect(dialog.getAttribute('aria-label')).toBe('Export Summary');
   });
 
   it('shows default option values in inputs', () => {
-    const onConfirm = vi.fn();
-    createSummaryExportDialog(container, onConfirm);
+    createSummaryExportDialog(container, mockBlobBuilder());
 
     const islandMin = container.querySelector('#summary-island-min') as HTMLInputElement;
     const backboneMin = container.querySelector('#summary-backbone-min') as HTMLInputElement;
@@ -49,24 +69,24 @@ describe('createSummaryExportDialog', () => {
     expect(minContained.value).toBe(String(DEFAULT_SUMMARY_OPTIONS.minimumPercentContained));
   });
 
-  it('calls onConfirm with default options when Export clicked without changes', () => {
-    const onConfirm = vi.fn();
-    createSummaryExportDialog(container, onConfirm);
+  it('calls buildBlob with default options when Export clicked without changes', () => {
+    const buildBlob = mockBlobBuilder();
+    createSummaryExportDialog(container, buildBlob);
 
     const confirmBtn = container.querySelector('.export-confirm-btn') as HTMLButtonElement;
     confirmBtn.click();
 
-    expect(onConfirm).toHaveBeenCalledOnce();
-    const options: Partial<SummaryOptions> = onConfirm.mock.calls[0]![0];
+    expect(buildBlob).toHaveBeenCalledOnce();
+    const options: Partial<SummaryOptions> = (buildBlob as ReturnType<typeof vi.fn>).mock.calls[0]![0];
     expect(options.islandMinLength).toBe(DEFAULT_SUMMARY_OPTIONS.islandMinLength);
     expect(options.backboneMinLength).toBe(DEFAULT_SUMMARY_OPTIONS.backboneMinLength);
     expect(options.maxLengthRatio).toBe(DEFAULT_SUMMARY_OPTIONS.maxLengthRatio);
     expect(options.minimumPercentContained).toBe(DEFAULT_SUMMARY_OPTIONS.minimumPercentContained);
   });
 
-  it('calls onConfirm with custom options when inputs changed', () => {
-    const onConfirm = vi.fn();
-    createSummaryExportDialog(container, onConfirm);
+  it('calls buildBlob with custom options when inputs changed', () => {
+    const buildBlob = mockBlobBuilder();
+    createSummaryExportDialog(container, buildBlob);
 
     const islandMin = container.querySelector('#summary-island-min') as HTMLInputElement;
     const maxRatio = container.querySelector('#summary-max-ratio') as HTMLInputElement;
@@ -77,15 +97,15 @@ describe('createSummaryExportDialog', () => {
     const confirmBtn = container.querySelector('.export-confirm-btn') as HTMLButtonElement;
     confirmBtn.click();
 
-    expect(onConfirm).toHaveBeenCalledOnce();
-    const options: Partial<SummaryOptions> = onConfirm.mock.calls[0]![0];
+    expect(buildBlob).toHaveBeenCalledOnce();
+    const options: Partial<SummaryOptions> = (buildBlob as ReturnType<typeof vi.fn>).mock.calls[0]![0];
     expect(options.islandMinLength).toBe(100);
     expect(options.maxLengthRatio).toBe(5.0);
   });
 
   it('clamps min percent contained to 0-1 range', () => {
-    const onConfirm = vi.fn();
-    createSummaryExportDialog(container, onConfirm);
+    const buildBlob = mockBlobBuilder();
+    createSummaryExportDialog(container, buildBlob);
 
     const minContained = container.querySelector('#summary-min-contained') as HTMLInputElement;
     minContained.value = '2.5';
@@ -93,13 +113,13 @@ describe('createSummaryExportDialog', () => {
     const confirmBtn = container.querySelector('.export-confirm-btn') as HTMLButtonElement;
     confirmBtn.click();
 
-    const options: Partial<SummaryOptions> = onConfirm.mock.calls[0]![0];
+    const options: Partial<SummaryOptions> = (buildBlob as ReturnType<typeof vi.fn>).mock.calls[0]![0];
     expect(options.minimumPercentContained).toBe(1);
   });
 
   it('clamps island min length to at least 1', () => {
-    const onConfirm = vi.fn();
-    createSummaryExportDialog(container, onConfirm);
+    const buildBlob = mockBlobBuilder();
+    createSummaryExportDialog(container, buildBlob);
 
     const islandMin = container.querySelector('#summary-island-min') as HTMLInputElement;
     islandMin.value = '-5';
@@ -107,13 +127,13 @@ describe('createSummaryExportDialog', () => {
     const confirmBtn = container.querySelector('.export-confirm-btn') as HTMLButtonElement;
     confirmBtn.click();
 
-    const options: Partial<SummaryOptions> = onConfirm.mock.calls[0]![0];
+    const options: Partial<SummaryOptions> = (buildBlob as ReturnType<typeof vi.fn>).mock.calls[0]![0];
     expect(options.islandMinLength).toBe(1);
   });
 
   it('uses fallback for NaN values', () => {
-    const onConfirm = vi.fn();
-    createSummaryExportDialog(container, onConfirm);
+    const buildBlob = mockBlobBuilder();
+    createSummaryExportDialog(container, buildBlob);
 
     const maxRatio = container.querySelector('#summary-max-ratio') as HTMLInputElement;
     maxRatio.value = 'abc';
@@ -121,60 +141,72 @@ describe('createSummaryExportDialog', () => {
     const confirmBtn = container.querySelector('.export-confirm-btn') as HTMLButtonElement;
     confirmBtn.click();
 
-    const options: Partial<SummaryOptions> = onConfirm.mock.calls[0]![0];
+    const options: Partial<SummaryOptions> = (buildBlob as ReturnType<typeof vi.fn>).mock.calls[0]![0];
     expect(options.maxLengthRatio).toBe(DEFAULT_SUMMARY_OPTIONS.maxLengthRatio);
   });
 
-  it('removes dialog on Cancel click', () => {
-    const onConfirm = vi.fn();
-    createSummaryExportDialog(container, onConfirm);
-
-    const cancelBtn = container.querySelector('.export-cancel-btn') as HTMLButtonElement;
-    cancelBtn.click();
-
-    expect(container.querySelector('.export-config-dialog')).toBeNull();
-    expect(container.querySelector('.export-config-backdrop')).toBeNull();
-    expect(onConfirm).not.toHaveBeenCalled();
-  });
-
-  it('removes dialog on backdrop click', () => {
-    const onConfirm = vi.fn();
-    createSummaryExportDialog(container, onConfirm);
-
-    const backdrop = container.querySelector('.export-config-backdrop') as HTMLElement;
-    backdrop.click();
-
-    expect(container.querySelector('.export-config-dialog')).toBeNull();
-    expect(onConfirm).not.toHaveBeenCalled();
-  });
-
-  it('removes dialog on Escape key', () => {
-    const onConfirm = vi.fn();
-    createSummaryExportDialog(container, onConfirm);
-
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-
-    expect(container.querySelector('.export-config-dialog')).toBeNull();
-    expect(onConfirm).not.toHaveBeenCalled();
-  });
-
-  it('removes dialog after Export click', () => {
-    const onConfirm = vi.fn();
-    createSummaryExportDialog(container, onConfirm);
+  it('replaces Export button with download link after Export click', () => {
+    createSummaryExportDialog(container, mockBlobBuilder());
 
     const confirmBtn = container.querySelector('.export-confirm-btn') as HTMLButtonElement;
     confirmBtn.click();
 
-    expect(container.querySelector('.export-config-dialog')).toBeNull();
+    const link = container.querySelector('a.export-confirm-btn') as HTMLAnchorElement;
+    expect(link).not.toBeNull();
+    expect(link.href).toBe('blob:http://localhost/fake-id');
+    expect(link.download).toBe('alignment_summary.zip');
+    expect(link.textContent).toContain('alignment_summary.zip');
   });
 
-  it('destroy method removes dialog elements', () => {
-    const onConfirm = vi.fn();
-    const handle = createSummaryExportDialog(container, onConfirm);
+  it('dialog stays open after Export click (until download link is clicked)', () => {
+    createSummaryExportDialog(container, mockBlobBuilder());
+
+    const confirmBtn = container.querySelector('.export-confirm-btn') as HTMLButtonElement;
+    confirmBtn.click();
+
+    const dialog = container.querySelector('dialog');
+    expect(dialog).not.toBeNull();
+  });
+
+  it('removes dialog on Cancel click', () => {
+    createSummaryExportDialog(container, mockBlobBuilder());
+
+    const cancelBtn = container.querySelector('.export-cancel-btn') as HTMLButtonElement;
+    cancelBtn.click();
+
+    expect(container.querySelector('dialog')).toBeNull();
+  });
+
+  it('removes dialog on cancel event (Escape key)', () => {
+    createSummaryExportDialog(container, mockBlobBuilder());
+
+    const dialog = container.querySelector('dialog') as HTMLDialogElement;
+    dialog.dispatchEvent(new Event('cancel'));
+
+    expect(container.querySelector('dialog')).toBeNull();
+  });
+
+  it('destroy method removes dialog element', () => {
+    const handle = createSummaryExportDialog(container, mockBlobBuilder());
 
     handle.destroy();
 
-    expect(container.querySelector('.export-config-dialog')).toBeNull();
-    expect(container.querySelector('.export-config-backdrop')).toBeNull();
+    expect(container.querySelector('dialog')).toBeNull();
+  });
+
+  it('revokes blob URL on destroy', () => {
+    const revoke = vi.fn();
+    const buildBlob = vi.fn(() => ({
+      blobUrl: 'blob:http://localhost/fake-id',
+      filename: 'alignment_summary.zip',
+      revoke,
+    }));
+    const handle = createSummaryExportDialog(container, buildBlob);
+
+    const confirmBtn = container.querySelector('.export-confirm-btn') as HTMLButtonElement;
+    confirmBtn.click();
+
+    handle.destroy();
+    expect(revoke).toHaveBeenCalledOnce();
   });
 });
