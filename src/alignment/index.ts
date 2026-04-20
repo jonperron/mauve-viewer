@@ -6,6 +6,8 @@ export {
   subscribeToProgress,
 } from './api-client.ts';
 
+export { createAlignmentDialog } from './alignment-dialog.ts';
+
 export type {
   AlignmentAlgorithm,
   AlignmentClientConfig,
@@ -19,3 +21,9 @@ export type {
   MauveAlignerParams,
   ProgressiveMauveParams,
 } from './types.ts';
+
+export type {
+  AlignmentDialogHandle,
+  AlignmentDialogResult,
+  LoadedSequence,
+} from './alignment-dialog.ts';
