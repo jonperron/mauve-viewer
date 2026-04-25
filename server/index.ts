@@ -11,7 +11,8 @@ if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
 const HOST = process.env.HOST ?? '0.0.0.0';
 const STATIC_ROOT = process.env.STATIC_ROOT
   ?? resolve(__dirname, '..', 'public');
-const BINARY_DIR = process.env.MAUVE_BINARY_DIR ?? '/usr/local/bin';
+const BINARY_DIR = process.env.MAUVE_BINARY_DIR
+  ?? resolve(__dirname, '..', '..', 'bin', 'linux-x64');
 const WORK_DIR = process.env.MAUVE_WORK_DIR
   ?? resolve(__dirname, '..', '.mauve-jobs');
 const MAX_CONCURRENT = Number(process.env.MAUVE_MAX_CONCURRENT ?? 2);
