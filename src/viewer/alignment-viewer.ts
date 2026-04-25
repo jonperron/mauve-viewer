@@ -53,6 +53,9 @@ import { exportSnps, downloadTextFile, exportGaps, exportPermutations, exportHom
 import type { ContigMap } from '../export/index.ts';
 import type { ContigBoundary } from '../annotations/types.ts';
 import { createHomologExportDialog } from './toolbar/options/homolog-export-dialog.ts';
+import { createToolsMenu } from './toolbar/tools-menu.ts';
+import type { ToolsMenuHandle } from './toolbar/tools-menu.ts';
+import { createReorderDialog } from '../contig-reorder/reorder-dialog.ts';
 import { createSummaryExportDialog } from './toolbar/options/summary-export-dialog.ts';
 import { createLcbWeightSlider } from './lcb-weight-slider.ts';
 import type { LcbWeightSliderHandle } from './lcb-weight-slider.ts';
@@ -90,6 +93,7 @@ export interface ViewerHandle {
   readonly annotationsHandle: AnnotationsHandle | undefined;
   readonly optionsPanelHandle: OptionsPanelHandle;
   readonly exportMenuHandle: ExportMenuHandle;
+  readonly toolsMenuHandle: ToolsMenuHandle;
   readonly colorSchemeMenuHandle: ColorSchemeMenuHandle;
   readonly regionSelectionHandle: RegionSelectionHandle;
   readonly getState: () => ViewerState;
@@ -551,6 +555,13 @@ export function renderAlignment(
       )
     : undefined;
 
+  const toolsMenuHandle = createToolsMenu(controlsBar, {
+    onOrderContigs: () => {
+      activeDialogHandle?.destroy();
+      activeDialogHandle = createReorderDialog(container);
+    },
+  });
+
   return {
     svg: svgNode,
     zoomHandle,
@@ -560,6 +571,7 @@ export function renderAlignment(
     annotationsHandle,
     optionsPanelHandle,
     exportMenuHandle,
+    toolsMenuHandle,
     colorSchemeMenuHandle,
     regionSelectionHandle,
     getState: () => viewerState,
@@ -573,6 +585,7 @@ export function renderAlignment(
       annotationsHandle?.destroy();
       tooltipHandle?.destroy();
       exportMenuHandle.destroy();
+      toolsMenuHandle.destroy();
       colorSchemeMenuHandle.destroy();
       optionsPanelHandle.destroy();
       trackControlsHandle.destroy();
