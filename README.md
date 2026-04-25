@@ -56,6 +56,7 @@ docker run -p 8080:80 ghcr.io/jonperron/mauve-viewer
 Full user guides are available in the [documentation](doc/README.md):
 
 - [File Formats](doc/file-formats.md) — Supported input and auxiliary formats
+- [Genome Alignment](doc/genome-alignment.md) — Run new alignments with server-side execution
 - [Viewer](doc/viewer.md) — Multi-panel layout and display modes
 - [Navigation](doc/navigation.md) — Zoom, pan, cursor, region selection, and feature search
 - [Annotations](doc/annotations.md) — Genomic feature display and interaction

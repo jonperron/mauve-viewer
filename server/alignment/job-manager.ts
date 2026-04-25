@@ -36,6 +36,7 @@ export interface JobManagerConfig {
   readonly binaryDir: string;
   readonly workDir: string;
   readonly maxConcurrent: number;
+  readonly cleanupDelayMs?: number;
   readonly io?: Partial<JobManagerIO>;
 }
 
@@ -47,6 +48,7 @@ interface Job {
   progress: string;
   error?: string;
   process?: ChildProcess;
+  slotReleased: boolean;
   readonly listeners: Set<(event: AlignmentProgressEvent) => void>;
 }
 
@@ -56,10 +58,12 @@ export class JobManager {
   private readonly jobs = new Map<string, Job>();
   private runningCount = 0;
   private readonly queue: string[] = [];
+  private readonly cleanupDelayMs: number;
 
   constructor(config: JobManagerConfig) {
     this.config = config;
     this.io = { ...defaultIO, ...config.io };
+    this.cleanupDelayMs = config.cleanupDelayMs ?? 5 * 60 * 1000;
   }
 
   async submit(request: AlignmentRequest): Promise<string> {
@@ -73,6 +77,7 @@ export class JobManager {
       jobDir,
       status: 'queued',
       progress: '',
+      slotReleased: false,
       listeners: new Set(),
     };
     this.jobs.set(jobId, job);
@@ -110,6 +115,7 @@ export class JobManager {
     const queueIdx = this.queue.indexOf(jobId);
     if (queueIdx >= 0) {
       this.queue.splice(queueIdx, 1); // Intentional mutation of internal queue
+      this.scheduleCleanup(job.id);
     }
 
     job.status = 'cancelled';
@@ -124,8 +130,8 @@ export class JobManager {
     const outputPath = join(job.jobDir, 'output.xmfa');
     try {
       return await this.io.readFile(outputPath, 'utf-8') as string;
-    } catch (_err: unknown) {
-      return _err instanceof Error ? _err.message : String(_err);
+    } catch {
+      return undefined;
     }
   }
 
@@ -157,6 +163,7 @@ export class JobManager {
 
   private async startJob(job: Job): Promise<void> {
     this.runningCount++;
+    job.slotReleased = false;
     job.status = 'running';
 
     try {
@@ -202,7 +209,7 @@ export class JobManager {
       });
 
       proc.on('close', (code) => {
-        this.runningCount--;
+        this.releaseRunningSlot(job);
 
         if (job.status === 'cancelled') {
           // Already handled
@@ -220,10 +227,11 @@ export class JobManager {
         }
 
         this.processQueue();
+        this.scheduleCleanup(job.id);
       });
 
       proc.on('error', (err) => {
-        this.runningCount--;
+        this.releaseRunningSlot(job);
         job.status = 'failed';
         job.error = err.message;
         this.broadcast(job, {
@@ -232,9 +240,10 @@ export class JobManager {
           message: err.message,
         });
         this.processQueue();
+        this.scheduleCleanup(job.id);
       });
     } catch (err) {
-      this.runningCount--;
+      this.releaseRunningSlot(job);
       job.status = 'failed';
       job.error = err instanceof Error ? err.message : String(err);
       this.broadcast(job, {
@@ -243,6 +252,7 @@ export class JobManager {
         message: job.error,
       });
       this.processQueue();
+      this.scheduleCleanup(job.id);
     }
   }
 
@@ -264,6 +274,28 @@ export class JobManager {
         // Listener threw — swallow to avoid breaking other listeners
       }
     }
+  }
+
+  private releaseRunningSlot(job: Job): void {
+    if (job.slotReleased) {
+      return;
+    }
+    job.slotReleased = true;
+    this.runningCount = Math.max(0, this.runningCount - 1);
+  }
+
+  private scheduleCleanup(jobId: string): void {
+    if (this.cleanupDelayMs < 0) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void this.cleanup(jobId).catch(() => {
+        // Ignore cleanup failures; they are non-fatal and may be retried manually.
+      });
+    }, this.cleanupDelayMs);
+
+    timer.unref?.();
   }
 }
 
