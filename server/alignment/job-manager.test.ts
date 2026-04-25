@@ -59,6 +59,7 @@ beforeEach(() => {
     binaryDir: '/usr/local/bin',
     workDir: '/tmp/mauve-test-jobs',
     maxConcurrent: 2,
+    cleanupDelayMs: -1,
     io,
   });
 });
@@ -256,6 +257,39 @@ describe('JobManager.cancel', () => {
 
     expect(manager.cancel(jobId)).toBe(false);
   });
+
+  it('starts next queued job after a cancelled running process exits', async () => {
+    const managerWithSingleSlot = new JobManager({
+      binaryDir: '/usr/local/bin',
+      workDir: '/tmp/mauve-test-jobs',
+      maxConcurrent: 1,
+      cleanupDelayMs: -1,
+      io,
+    });
+
+    const proc1 = createMockProcess();
+    const proc2 = createMockProcess();
+    io.spawn
+      .mockReturnValueOnce(proc1 as never)
+      .mockReturnValueOnce(proc2 as never);
+
+    const firstId = await managerWithSingleSlot.submit(validRequest);
+    const secondId = await managerWithSingleSlot.submit(validRequest);
+
+    expect(managerWithSingleSlot.getStatus(secondId)?.status).toBe('queued');
+
+    const cancelled = managerWithSingleSlot.cancel(firstId);
+
+    expect(cancelled).toBe(true);
+    expect(managerWithSingleSlot.getStatus(secondId)?.status).toBe('queued');
+
+    proc1.emit('close', 0);
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(managerWithSingleSlot.getStatus(secondId)?.status).toBe('running');
+    expect(io.spawn).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('JobManager.getResult', () => {
@@ -284,6 +318,18 @@ describe('JobManager.getResult', () => {
 
   it('returns undefined for unknown job', async () => {
     expect(await manager.getResult('nonexistent')).toBeUndefined();
+  });
+
+  it('returns undefined when completed job output cannot be read', async () => {
+    const mockProc = createMockProcess();
+    io.spawn.mockReturnValue(mockProc as never);
+    (io.readFile as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('ENOENT'));
+
+    const jobId = await manager.submit(validRequest);
+    mockProc.emit('close', 0);
+
+    const result = await manager.getResult(jobId);
+    expect(result).toBeUndefined();
   });
 });
 

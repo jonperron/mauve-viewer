@@ -9,6 +9,7 @@ When you load a JSON alignment file containing PATRIC genome identifiers (format
 ## Guides
 
 - [File Formats](file-formats.md) — Supported input and auxiliary formats
+- [Genome Alignment](genome-alignment.md) — Run new alignments with server-side execution
 - [Viewer](viewer.md) — Multi-panel layout and display modes
 - [Navigation](navigation.md) — Zoom, pan, cursor, region selection, and feature search
 - [Annotations](annotations.md) — Genomic feature display and interaction
