@@ -8,6 +8,8 @@ export {
 
 export { createAlignmentDialog } from './alignment-dialog.ts';
 
+export { createAlignmentProgress } from './alignment-progress.ts';
+
 export type {
   AlignmentAlgorithm,
   AlignmentClientConfig,
@@ -27,3 +29,8 @@ export type {
   AlignmentDialogResult,
   LoadedSequence,
 } from './alignment-dialog.ts';
+
+export type {
+  AlignmentProgressCallbacks,
+  AlignmentProgressHandle,
+} from './alignment-progress.ts';
