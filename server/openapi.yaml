@@ -1,11 +1,7 @@
 openapi: 3.0.3
 info:
   title: Mauve Viewer API
-  description: REST API for the Mauve genome alignment viewer. Provides health checks, alignment job management, and real-time progress streaming.
-  version: 0.1.0
-  license:
-    name: GPL-3.0-or-later
-    url: https://www.gnu.org/licenses/gpl-3.0.html
+  description: REST API for the Mauve genome alignment viewer. 
 
 servers:
   - url: /
@@ -18,6 +14,8 @@ tags:
     description: Server health monitoring
   - name: alignment
     description: Genome alignment job management
+  - name: contig-reordering
+    description: Mauve Contig Mover job management
 
 paths:
   /api/health:
@@ -201,6 +199,123 @@ paths:
               example:
                 error: Job not found
 
+  /api/reorder:
+    post:
+      tags: [contig-reordering]
+      summary: Submit contig reordering job
+      description: >
+        Submits a Mauve Contig Mover reordering job with one reference genome
+        and one draft genome. The server executes iterative reordering until
+        convergence or until the maximum number of iterations is reached.
+      operationId: submitReorder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderRequest"
+      responses:
+        "201":
+          description: Job created and queued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReorderJobCreated"
+        "400":
+          description: Invalid request — missing or malformed fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missingReference:
+                  summary: Missing reference genome input
+                  value:
+                    error: Reference genome is required
+                missingDraft:
+                  summary: Missing draft genome input
+                  value:
+                    error: Draft genome is required
+                invalidDraftFormat:
+                  summary: Unsupported draft format
+                  value:
+                    error: Draft must be FASTA or GenBank
+
+  /api/reorder/{jobId}/status:
+    get:
+      tags: [contig-reordering]
+      summary: Get reordering job status
+      description: >
+        Returns the current status of a contig reordering job, including
+        current iteration information while the job is running.
+      operationId: getReorderStatus
+      parameters:
+        - $ref: "#/components/parameters/reorderJobId"
+      responses:
+        "200":
+          description: Reordering job status retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReorderJobStatusResponse"
+        "404":
+          description: Job not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: Job not found
+
+  /api/reorder/{jobId}/result:
+    get:
+      tags: [contig-reordering]
+      summary: Download contig reordering result
+      description: >
+        Returns the parsed contig reordering output for a completed job,
+        including ordered contigs, reversed contigs, conflicting contigs, and
+        convergence metadata.
+      operationId: getReorderResult
+      parameters:
+        - $ref: "#/components/parameters/reorderJobId"
+      responses:
+        "200":
+          description: Reordering result retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReorderResult"
+        "404":
+          description: Result not available (job not completed or not found).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: Result not available
+
+  /api/reorder/{jobId}:
+    delete:
+      tags: [contig-reordering]
+      summary: Cancel contig reordering job
+      description: >
+        Cancels a running or queued contig reordering job. Intermediate output
+        from completed iterations can remain available.
+      operationId: cancelReorder
+      parameters:
+        - $ref: "#/components/parameters/reorderJobId"
+      responses:
+        "204":
+          description: Job cancelled successfully.
+        "409":
+          description: Job cannot be cancelled (already finished).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: Job cannot be cancelled
+
 components:
   parameters:
     jobId:
@@ -212,6 +327,15 @@ components:
         type: string
         format: uuid
         example: 550e8400-e29b-41d4-a716-446655440000
+
+    reorderJobId:
+      name: jobId
+      in: path
+      required: true
+      description: Unique identifier of the contig reordering job.
+      schema:
+        type: string
+        example: reorder-123
 
   schemas:
     HealthResponse:
@@ -426,3 +550,150 @@ components:
           type: string
           description: Human-readable progress or error message.
           example: "Computing LCBs..."
+
+    ReorderSequenceInput:
+      type: object
+      description: Input genome sequence for a contig reordering job.
+      required: [name, content, format]
+      properties:
+        name:
+          type: string
+          description: Original filename of the sequence.
+          example: draft.fasta
+        content:
+          type: string
+          description: Full text content of the sequence file.
+          example: ">contig1\nATCGATCG"
+        format:
+          type: string
+          description: File format of the input sequence.
+          enum: [fasta, genbank]
+          example: fasta
+
+    ReorderRequest:
+      type: object
+      description: Request body for submitting a new contig reordering job.
+      required: [reference, draft]
+      properties:
+        reference:
+          $ref: "#/components/schemas/ReorderSequenceInput"
+        draft:
+          $ref: "#/components/schemas/ReorderSequenceInput"
+        maxIterations:
+          type: integer
+          minimum: 1
+          maximum: 15
+          default: 15
+          description: Maximum number of iterations before forced termination.
+          example: 15
+
+    ReorderJobStatus:
+      type: string
+      description: Lifecycle state of a contig reordering job.
+      enum: [queued, running, completed, failed, cancelled]
+      example: running
+
+    ReorderJobCreated:
+      type: object
+      description: Response returned when a reordering job is successfully created.
+      required: [jobId, status]
+      properties:
+        jobId:
+          type: string
+          description: Unique identifier assigned to the new job.
+          example: reorder-123
+        status:
+          $ref: "#/components/schemas/ReorderJobStatus"
+
+    ReorderJobStatusResponse:
+      type: object
+      description: Full status information for a contig reordering job.
+      required: [jobId, status]
+      properties:
+        jobId:
+          type: string
+          description: Unique identifier of the job.
+          example: reorder-123
+        status:
+          $ref: "#/components/schemas/ReorderJobStatus"
+        iteration:
+          type: integer
+          minimum: 1
+          description: Current iteration number while the job is running.
+          example: 4
+        maxIterations:
+          type: integer
+          minimum: 1
+          description: Maximum iteration count configured for this job.
+          example: 15
+        error:
+          type: string
+          description: Error message if the job failed.
+          example: progressiveMauve exited with code 1
+
+    ReorderContigEntry:
+      type: object
+      description: Reordered contig with pseudocoordinates and flags.
+      required: [name, start, end, reversed, conflicting]
+      properties:
+        name:
+          type: string
+          description: Contig identifier.
+          example: contig_001
+        start:
+          type: integer
+          minimum: 1
+          description: Pseudocoordinate start in reordered draft space.
+          example: 1
+        end:
+          type: integer
+          minimum: 1
+          description: Pseudocoordinate end in reordered draft space.
+          example: 45231
+        reversed:
+          type: boolean
+          description: True if contig orientation was reversed.
+          example: false
+        conflicting:
+          type: boolean
+          description: True if contig had conflicting placement evidence.
+          example: false
+
+    ReorderResult:
+      type: object
+      description: Parsed output of a completed contig reordering job.
+      required:
+        [
+          orderedContigs,
+          reversedContigs,
+          conflictingContigs,
+          iterationsPerformed,
+          converged,
+        ]
+      properties:
+        orderedContigs:
+          type: array
+          description: Contigs in final reordered order with pseudocoordinates.
+          items:
+            $ref: "#/components/schemas/ReorderContigEntry"
+        reversedContigs:
+          type: array
+          description: Names of contigs reversed relative to reference.
+          items:
+            type: string
+          example: [contig_004, contig_010]
+        conflictingContigs:
+          type: array
+          description: Names of contigs with conflicting placement information.
+          items:
+            type: string
+          example: [contig_007]
+        iterationsPerformed:
+          type: integer
+          minimum: 1
+          description: Number of iterations executed before termination.
+          example: 3
+        converged:
+          type: boolean
+          description: Whether the ordering converged before max iterations.
+          example: true
