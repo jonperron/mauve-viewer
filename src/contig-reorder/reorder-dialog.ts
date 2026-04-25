@@ -1,10 +1,13 @@
 import {
-  submitReorderJob,
+  submitReorder,
   getReorderStatus,
   getReorderResult,
-  cancelReorderJob,
+  cancelReorder,
 } from './api-client.ts';
-import type { ReorderFormat, ReorderResult } from './api-client.ts';
+import type { ReorderSequenceFormat, ReorderResult } from './types.ts';
+
+/** Default API config using relative URLs (same-origin server) */
+const DEFAULT_CONFIG = { baseUrl: '' } as const;
 
 /** Polling interval in milliseconds between status checks */
 const POLL_INTERVAL_MS = 2000;
@@ -24,7 +27,7 @@ export interface ReorderDialogHandle {
 /** Callback invoked when reordering completes successfully */
 export type ReorderDoneCallback = (result: ReorderResult) => void;
 
-function detectFormat(filename: string): ReorderFormat {
+function detectFormat(filename: string): ReorderSequenceFormat {
   const lower = filename.toLowerCase();
   if (
     lower.endsWith('.gbk') ||
@@ -202,7 +205,9 @@ export function createReorderDialog(
   function cancelActiveJob(): void {
     stopPolling();
     if (activeJobId !== undefined) {
-      void cancelReorderJob(activeJobId);
+      void cancelReorder(DEFAULT_CONFIG, activeJobId).catch(() => {
+        // Best-effort — ignore cancellation failures
+      });
       activeJobId = undefined;
     }
   }
@@ -219,13 +224,13 @@ export function createReorderDialog(
     pollTimerId = undefined;
 
     try {
-      const status = await getReorderStatus(jobId);
+      const status = await getReorderStatus(DEFAULT_CONFIG, jobId);
 
       if (destroyed) return;
 
       if (status.status === 'completed') {
         activeJobId = undefined;
-        const result = await getReorderResult(jobId);
+        const result = await getReorderResult(DEFAULT_CONFIG, jobId);
         if (destroyed) return;
         lastResult = result;
         onDone?.(result);
@@ -297,11 +302,11 @@ export function createReorderDialog(
     updateProgressText(0, maxIterations);
 
     try {
-      const { jobId } = await submitReorderJob(
-        { name: refFile.name, content: refContent, format: detectFormat(refFile.name) },
-        { name: draftFile.name, content: draftContent, format: detectFormat(draftFile.name) },
+      const { jobId } = await submitReorder(DEFAULT_CONFIG, {
+        reference: { name: refFile.name, content: refContent, format: detectFormat(refFile.name) },
+        draft: { name: draftFile.name, content: draftContent, format: detectFormat(draftFile.name) },
         maxIterations,
-      );
+      });
       activeJobId = jobId;
       scheduleNextPoll(jobId);
     } catch {
