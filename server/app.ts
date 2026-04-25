@@ -6,11 +6,14 @@ import {
   registerAlignmentRoutes,
   registerAlignmentWebSocket,
 } from './alignment/routes.js';
+import { ReorderJobManager, type ReorderJobManagerConfig } from './contig-reorder/job-manager.js';
+import { registerReorderRoutes } from './contig-reorder/routes.js';
 
 export interface ServerOptions {
   readonly logger: boolean;
   readonly staticRoot: string;
   readonly alignment?: JobManagerConfig;
+  readonly contigReorder?: ReorderJobManagerConfig;
 }
 
 export function buildApp(options: ServerOptions): FastifyInstance {
@@ -30,6 +33,11 @@ export function buildApp(options: ServerOptions): FastifyInstance {
     app.after(() => {
       registerAlignmentWebSocket(app, jobManager);
     });
+  }
+
+  if (options.contigReorder) {
+    const reorderManager = new ReorderJobManager(options.contigReorder);
+    registerReorderRoutes(app, reorderManager);
   }
 
   app.setNotFoundHandler(async (request, reply) => {

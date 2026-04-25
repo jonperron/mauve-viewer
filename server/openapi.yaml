@@ -18,6 +18,8 @@ tags:
     description: Server health monitoring
   - name: alignment
     description: Genome alignment job management
+  - name: reorder
+    description: Contig reordering (Mauve Contig Mover)
 
 paths:
   /api/health:
@@ -200,6 +202,128 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
               example:
                 error: Job not found
+
+  /api/reorder:
+    post:
+      tags: [reorder]
+      summary: Submit contig reordering job
+      description: >
+        Submits a new Mauve Contig Mover (MCM) job. Requires a reference genome
+        and a draft genome in FASTA or GenBank format. The job runs iteratively
+        until convergence or the configured maximum number of iterations.
+      operationId: submitReorder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderRequest"
+      responses:
+        "201":
+          description: Job created and queued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReorderJobCreated"
+        "400":
+          description: Invalid request — missing or malformed fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missingReference:
+                  summary: Missing reference sequence
+                  value:
+                    error: "reference: must be an object"
+                missingDraft:
+                  summary: Missing draft sequence
+                  value:
+                    error: "draft: must be an object"
+                invalidFormat:
+                  summary: Unsupported sequence format
+                  value:
+                    error: "draft: format must be fasta or genbank"
+                invalidIterations:
+                  summary: Non-numeric maxIterations
+                  value:
+                    error: maxIterations must be a number
+
+  /api/reorder/{jobId}/status:
+    get:
+      tags: [reorder]
+      summary: Get reordering job status
+      description: >
+        Returns the current status of a contig reordering job, including
+        the number of completed iterations and the configured maximum.
+      operationId: getReorderStatus
+      parameters:
+        - $ref: "#/components/parameters/jobId"
+      responses:
+        "200":
+          description: Job status retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReorderJobStatusResponse"
+        "404":
+          description: Job not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: Job not found
+
+  /api/reorder/{jobId}:
+    delete:
+      tags: [reorder]
+      summary: Cancel reordering job
+      description: >
+        Cancels a running or queued contig reordering job. Sends SIGTERM to
+        the ContigOrderer process if running. Returns 204 on success, 409 if
+        the job is already completed, failed, or cancelled.
+      operationId: cancelReorder
+      parameters:
+        - $ref: "#/components/parameters/jobId"
+      responses:
+        "204":
+          description: Job cancelled successfully.
+        "409":
+          description: Job cannot be cancelled (already finished).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: Job cannot be cancelled
+
+  /api/reorder/{jobId}/result:
+    get:
+      tags: [reorder]
+      summary: Download reordering result
+      description: >
+        Returns the reordered draft genome sequence and the final
+        *_contigs.tab file as a JSON object. Only available after the
+        job reaches the `completed` status.
+      operationId: getReorderResult
+      parameters:
+        - $ref: "#/components/parameters/jobId"
+      responses:
+        "200":
+          description: Reordering result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReorderResult"
+        "404":
+          description: Result not available (job not completed or not found).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: Result not available
 
 components:
   parameters:
@@ -426,3 +550,106 @@ components:
           type: string
           description: Human-readable progress or error message.
           example: "Computing LCBs..."
+
+    ReorderSequenceFormat:
+      type: string
+      description: Supported input formats for reordering sequences.
+      enum: [fasta, genbank]
+      example: fasta
+
+    ReorderSequenceInput:
+      type: object
+      description: An input genome sequence for contig reordering.
+      required: [name, content, format]
+      properties:
+        name:
+          type: string
+          description: Original filename of the sequence.
+          example: reference.fasta
+        content:
+          type: string
+          description: Full text content of the sequence file (max 10 MB).
+          example: ">ref\nATCGATCG"
+        format:
+          $ref: "#/components/schemas/ReorderSequenceFormat"
+
+    ReorderRequest:
+      type: object
+      description: Request body for submitting a new contig reordering job.
+      required: [reference, draft]
+      properties:
+        reference:
+          $ref: "#/components/schemas/ReorderSequenceInput"
+        draft:
+          $ref: "#/components/schemas/ReorderSequenceInput"
+        maxIterations:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 15
+          description: >
+            Maximum number of reordering iterations. Clamped to the range
+            1–100. Defaults to 15 (the MCM default).
+          example: 15
+
+    ReorderJobStatus:
+      type: string
+      description: Lifecycle state of a contig reordering job.
+      enum: [queued, running, completed, failed, cancelled]
+      example: running
+
+    ReorderJobCreated:
+      type: object
+      description: Response returned when a reordering job is successfully created.
+      required: [jobId, status]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+          description: Unique identifier assigned to the new job.
+          example: 550e8400-e29b-41d4-a716-446655440000
+        status:
+          $ref: "#/components/schemas/ReorderJobStatus"
+
+    ReorderJobStatusResponse:
+      type: object
+      description: Full status information for a contig reordering job.
+      required: [jobId, status, iteration, maxIterations]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+          description: Unique identifier of the job.
+          example: 550e8400-e29b-41d4-a716-446655440000
+        status:
+          $ref: "#/components/schemas/ReorderJobStatus"
+        iteration:
+          type: integer
+          minimum: 0
+          description: Number of reordering iterations completed so far.
+          example: 3
+        maxIterations:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum configured number of iterations.
+          example: 15
+        error:
+          type: string
+          description: Error message if the job failed.
+          example: "Process exited with code 1"
+
+    ReorderResult:
+      type: object
+      description: Result of a completed contig reordering job.
+      required: [sequence, contigsTab]
+      properties:
+        sequence:
+          type: string
+          description: Reordered draft genome in FASTA or GenBank format.
+          example: ">contig1\nATCG\n>contig2\nGCTA"
+        contigsTab:
+          type: string
+          description: Contents of the final *_contigs.tab file.
+          example: "Contigs to reverse:\ncontig1\nOrdered contigs:\ncontig2\tcontig1\n"
+

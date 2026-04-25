@@ -19,6 +19,16 @@ if (!Number.isInteger(MAX_CONCURRENT) || MAX_CONCURRENT < 1) {
   throw new RangeError(`Invalid MAUVE_MAX_CONCURRENT: ${process.env.MAUVE_MAX_CONCURRENT}`);
 }
 
+const MAUVE_JAR = process.env.MAUVE_JAR;
+const REORDER_WORK_DIR = process.env.MAUVE_REORDER_WORK_DIR
+  ?? resolve(__dirname, '..', '.mauve-reorder-jobs');
+const REORDER_MAX_CONCURRENT = Number(process.env.MAUVE_REORDER_MAX_CONCURRENT ?? 1);
+if (!Number.isInteger(REORDER_MAX_CONCURRENT) || REORDER_MAX_CONCURRENT < 1) {
+  throw new RangeError(
+    `Invalid MAUVE_REORDER_MAX_CONCURRENT: ${process.env.MAUVE_REORDER_MAX_CONCURRENT}`,
+  );
+}
+
 const app = buildApp({
   logger: true,
   staticRoot: STATIC_ROOT,
@@ -27,6 +37,13 @@ const app = buildApp({
     workDir: WORK_DIR,
     maxConcurrent: MAX_CONCURRENT,
   },
+  contigReorder: MAUVE_JAR
+    ? {
+        jarPath: MAUVE_JAR,
+        workDir: REORDER_WORK_DIR,
+        maxConcurrent: REORDER_MAX_CONCURRENT,
+      }
+    : undefined,
 });
 
 try {
