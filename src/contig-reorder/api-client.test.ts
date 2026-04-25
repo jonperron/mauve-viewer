@@ -1,140 +1,105 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-  validateSequenceSizes,
-  submitReorderJob,
+  submitReorder,
   getReorderStatus,
+  cancelReorder,
   getReorderResult,
-  cancelReorderJob,
-  MAX_SEQUENCE_BYTES,
-  MAX_AGGREGATE_BYTES,
 } from './api-client.ts';
-import type { ReorderSequence } from './api-client.ts';
+import type { ReorderClientConfig, ReorderRequest } from './types.ts';
 
-const refSeq: ReorderSequence = {
-  name: 'ref.fasta',
-  content: '>ref\nATCG',
-  format: 'fasta',
+const config: ReorderClientConfig = { baseUrl: 'http://localhost:3000' };
+
+const validRequest: ReorderRequest = {
+  reference: { name: 'ref.fasta', content: '>ref\nATCG', format: 'fasta' },
+  draft: { name: 'draft.fasta', content: '>contig1\nGCTA', format: 'fasta' },
+  maxIterations: 10,
 };
 
-const draftSeq: ReorderSequence = {
-  name: 'draft.fasta',
-  content: '>draft\nGCTA',
-  format: 'fasta',
-};
-
-describe('validateSequenceSizes', () => {
-  it('passes for small sequences', () => {
-    expect(() => validateSequenceSizes(refSeq, draftSeq)).not.toThrow();
-  });
-
-  it('throws when reference exceeds per-file limit', () => {
-    const bigRef: ReorderSequence = {
-      ...refSeq,
-      content: 'A'.repeat(MAX_SEQUENCE_BYTES + 1),
-    };
-    expect(() => validateSequenceSizes(bigRef, draftSeq)).toThrow(RangeError);
-    expect(() => validateSequenceSizes(bigRef, draftSeq)).toThrow(/reference/i);
-  });
-
-  it('throws when draft exceeds per-file limit', () => {
-    const bigDraft: ReorderSequence = {
-      ...draftSeq,
-      content: 'A'.repeat(MAX_SEQUENCE_BYTES + 1),
-    };
-    expect(() => validateSequenceSizes(refSeq, bigDraft)).toThrow(RangeError);
-    expect(() => validateSequenceSizes(refSeq, bigDraft)).toThrow(/draft/i);
-  });
-
-  it('throws when aggregate size exceeds limit', () => {
-    const halfLimit = Math.ceil(MAX_AGGREGATE_BYTES / 2) + 1;
-    const bigRef: ReorderSequence = { ...refSeq, content: 'A'.repeat(halfLimit) };
-    const bigDraft: ReorderSequence = { ...draftSeq, content: 'A'.repeat(halfLimit) };
-    expect(() => validateSequenceSizes(bigRef, bigDraft)).toThrow(RangeError);
-    expect(() => validateSequenceSizes(bigRef, bigDraft)).toThrow(/total/i);
-  });
+beforeEach(() => {
+  vi.restoreAllMocks();
 });
 
-describe('submitReorderJob', () => {
-  beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn());
-  });
+// ---------------------------------------------------------------------------
+// submitReorder
+// ---------------------------------------------------------------------------
 
-  it('sends POST /api/reorder with correct body', async () => {
-    const mockFetch = vi.mocked(fetch);
-    mockFetch.mockResolvedValue({
+describe('submitReorder', () => {
+  it('returns job ID and status on 201', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ jobId: 'abc', status: 'queued' }),
-    } as Response);
+      json: async () => ({ jobId: 'abc-123', status: 'queued' }),
+    }));
 
-    await submitReorderJob(refSeq, draftSeq, 15);
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/api/reorder',
-      expect.objectContaining({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    );
-    const body = JSON.parse(mockFetch.mock.calls[0]![1]!.body as string);
-    expect(body.reference).toEqual(refSeq);
-    expect(body.draft).toEqual(draftSeq);
-    expect(body.maxIterations).toBe(15);
-  });
-
-  it('returns the parsed job created response', async () => {
-    vi.mocked(fetch).mockResolvedValue({
-      ok: true,
-      json: async () => ({ jobId: 'xyz', status: 'queued' }),
-    } as Response);
-
-    const result = await submitReorderJob(refSeq, draftSeq, 10);
-    expect(result.jobId).toBe('xyz');
+    const result = await submitReorder(config, validRequest);
+    expect(result.jobId).toBe('abc-123');
     expect(result.status).toBe('queued');
   });
 
-  it('throws when response is not ok', async () => {
-    vi.mocked(fetch).mockResolvedValue({ ok: false, status: 400 } as Response);
+  it('POSTs to /api/reorder with JSON body', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ jobId: 'x', status: 'queued' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
 
-    await expect(submitReorderJob(refSeq, draftSeq, 15)).rejects.toThrow(
-      'Failed to submit reorder job',
+    await submitReorder(config, validRequest);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'http://localhost:3000/api/reorder',
+      expect.objectContaining({ method: 'POST' }),
     );
   });
 
-  it('throws before fetch when sequence sizes are too large', async () => {
-    const bigRef: ReorderSequence = {
-      ...refSeq,
-      content: 'A'.repeat(MAX_SEQUENCE_BYTES + 1),
-    };
+  it('throws on non-OK response with server error message', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: 'reference content is required' }),
+    }));
 
-    await expect(submitReorderJob(bigRef, draftSeq, 15)).rejects.toThrow(RangeError);
-    expect(fetch).not.toHaveBeenCalled();
+    await expect(submitReorder(config, validRequest)).rejects.toThrow(
+      'reference content is required',
+    );
+  });
+
+  it('throws with status code when no error message in body', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({}),
+    }));
+
+    await expect(submitReorder(config, validRequest)).rejects.toThrow('500');
+  });
+
+  it('throws with fallback when error field is not a string', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: 42 }),
+    }));
+
+    await expect(submitReorder(config, validRequest)).rejects.toThrow('400');
+  });
+
+  it('throws with fallback when json() throws on error response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => { throw new Error('invalid json'); },
+    }));
+
+    await expect(submitReorder(config, validRequest)).rejects.toThrow('503');
   });
 });
 
+// ---------------------------------------------------------------------------
+// getReorderStatus
+// ---------------------------------------------------------------------------
+
 describe('getReorderStatus', () => {
-  beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn());
-  });
-
-  it('fetches the correct URL', async () => {
-    const mockFetch = vi.mocked(fetch);
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        jobId: 'abc',
-        status: 'running',
-        iteration: 2,
-        maxIterations: 15,
-      }),
-    } as Response);
-
-    await getReorderStatus('abc');
-
-    expect(mockFetch).toHaveBeenCalledWith('/api/reorder/abc/status');
-  });
-
-  it('returns parsed status', async () => {
-    vi.mocked(fetch).mockResolvedValue({
+  it('returns status response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         jobId: 'abc',
@@ -142,81 +107,95 @@ describe('getReorderStatus', () => {
         iteration: 3,
         maxIterations: 15,
       }),
-    } as Response);
+    }));
 
-    const status = await getReorderStatus('abc');
-    expect(status.iteration).toBe(3);
+    const status = await getReorderStatus(config, 'abc');
     expect(status.status).toBe('running');
+    expect(status.iteration).toBe(3);
   });
 
-  it('throws when response is not ok', async () => {
-    vi.mocked(fetch).mockResolvedValue({ ok: false } as Response);
+  it('encodes jobId in URL', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ jobId: 'a/b', status: 'queued', iteration: 0, maxIterations: 15 }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
 
-    await expect(getReorderStatus('bad-id')).rejects.toThrow(
-      'Failed to get reorder job status',
+    await getReorderStatus(config, 'a/b');
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining('a%2Fb'),
     );
   });
+
+  it('throws on 404', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({ error: 'Job not found' }),
+    }));
+
+    await expect(getReorderStatus(config, 'unknown')).rejects.toThrow('Job not found');
+  });
 });
+
+// ---------------------------------------------------------------------------
+// cancelReorder
+// ---------------------------------------------------------------------------
+
+describe('cancelReorder', () => {
+  it('resolves on 204', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+    await expect(cancelReorder(config, 'abc')).resolves.toBeUndefined();
+  });
+
+  it('DELETEs /api/reorder/:jobId', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await cancelReorder(config, 'my-job');
+    expect(mockFetch).toHaveBeenCalledWith(
+      'http://localhost:3000/api/reorder/my-job',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  it('throws on 409 Conflict', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: async () => ({ error: 'Job cannot be cancelled' }),
+    }));
+
+    await expect(cancelReorder(config, 'abc')).rejects.toThrow('Job cannot be cancelled');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getReorderResult
+// ---------------------------------------------------------------------------
 
 describe('getReorderResult', () => {
-  beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn());
-  });
-
-  it('fetches result from correct URL', async () => {
-    const mockFetch = vi.mocked(fetch);
-    mockFetch.mockResolvedValue({
+  it('returns reorder result on success', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ sequence: '>c1\nATCG', contigsTab: 'tab' }),
-    } as Response);
+      json: async () => ({
+        sequence: '>contig1\nATCG',
+        contigsTab: 'Ordered Contigs\ntype\tlabel...',
+      }),
+    }));
 
-    await getReorderResult('abc');
-
-    expect(mockFetch).toHaveBeenCalledWith('/api/reorder/abc/result');
+    const result = await getReorderResult(config, 'abc');
+    expect(result.sequence).toContain('>contig1');
+    expect(result.contigsTab).toContain('Ordered Contigs');
   });
 
-  it('returns sequence and contigsTab', async () => {
-    vi.mocked(fetch).mockResolvedValue({
-      ok: true,
-      json: async () => ({ sequence: '>c1\nATCG', contigsTab: 'Ordered:\nc1\n' }),
-    } as Response);
+  it('throws on 404 when job not found', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({ error: 'Result not available' }),
+    }));
 
-    const result = await getReorderResult('abc');
-    expect(result.sequence).toBe('>c1\nATCG');
-    expect(result.contigsTab).toBe('Ordered:\nc1\n');
-  });
-
-  it('throws when response is not ok', async () => {
-    vi.mocked(fetch).mockResolvedValue({ ok: false } as Response);
-
-    await expect(getReorderResult('abc')).rejects.toThrow(
-      'Failed to get reorder result',
-    );
-  });
-});
-
-describe('cancelReorderJob', () => {
-  beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn());
-  });
-
-  it('sends DELETE to correct URL', async () => {
-    vi.mocked(fetch).mockResolvedValue({ ok: true } as Response);
-
-    await cancelReorderJob('abc');
-
-    expect(fetch).toHaveBeenCalledWith('/api/reorder/abc', { method: 'DELETE' });
-  });
-
-  it('does not throw on network failure', async () => {
-    vi.mocked(fetch).mockRejectedValue(new Error('network error'));
-
-    await expect(cancelReorderJob('abc')).resolves.toBeUndefined();
-  });
-
-  it('does not throw when response is not ok', async () => {
-    vi.mocked(fetch).mockResolvedValue({ ok: false } as Response);
-
-    await expect(cancelReorderJob('abc')).resolves.toBeUndefined();
+    await expect(getReorderResult(config, 'bad')).rejects.toThrow('Result not available');
   });
 });

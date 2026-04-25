@@ -1,131 +1,109 @@
-/** Supported input formats for reordering sequences */
-export type ReorderFormat = 'fasta' | 'genbank';
-
-/** An input genome sequence for contig reordering */
-export interface ReorderSequence {
-  readonly name: string;
-  readonly content: string;
-  readonly format: ReorderFormat;
-}
-
-/** Response from POST /api/reorder */
-export interface ReorderJobCreated {
-  readonly jobId: string;
-  readonly status: string;
-}
-
-/** Response from GET /api/reorder/:jobId/status */
-export interface ReorderJobStatus {
-  readonly jobId: string;
-  readonly status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
-  readonly iteration: number;
-  readonly maxIterations: number;
-  readonly error?: string;
-}
-
-/** Response from GET /api/reorder/:jobId/result */
-export interface ReorderResult {
-  readonly sequence: string;
-  readonly contigsTab: string;
-}
-
-/** Maximum allowed content size per individual sequence (10 MB) */
-export const MAX_SEQUENCE_BYTES = 10 * 1024 * 1024;
-
-/** Maximum allowed aggregate content size for both sequences (15 MB) */
-export const MAX_AGGREGATE_BYTES = 15 * 1024 * 1024;
-
 /**
- * Validates that sequence content sizes do not exceed the server limits.
- * Throws a RangeError if any limit is exceeded.
+ * REST API client for the Mauve Contig Mover (MCM) reordering service.
+ *
+ * Provides typed wrappers for all /api/reorder/** endpoints.
  */
-export function validateSequenceSizes(
-  reference: ReorderSequence,
-  draft: ReorderSequence,
-): void {
-  const encoder = new TextEncoder();
-  const refBytes = encoder.encode(reference.content).length;
-  const draftBytes = encoder.encode(draft.content).length;
+import type {
+  ReorderClientConfig,
+  ReorderJobCreated,
+  ReorderJobStatusResponse,
+  ReorderRequest,
+  ReorderResult,
+} from './types.ts';
 
-  if (refBytes > MAX_SEQUENCE_BYTES) {
-    throw new RangeError('Reference sequence exceeds maximum allowed size (10 MB)');
+function extractErrorMessage(body: unknown, fallback: string): string {
+  if (typeof body === 'object' && body !== null && 'error' in body) {
+    const err = (body as { readonly error: unknown }).error;
+    if (typeof err === 'string') return err;
   }
-  if (draftBytes > MAX_SEQUENCE_BYTES) {
-    throw new RangeError('Draft sequence exceeds maximum allowed size (10 MB)');
-  }
-  if (refBytes + draftBytes > MAX_AGGREGATE_BYTES) {
-    throw new RangeError('Total sequence size exceeds maximum allowed size (20 MB)');
-  }
+  return fallback;
 }
 
 /**
- * Submit a new contig reordering job to the server.
- * Validates sequence sizes before sending.
- * @throws {RangeError} if sizes exceed limits
- * @throws {Error} on HTTP or network error
+ * Submit a new contig reordering job.
+ *
+ * POST /api/reorder
  */
-export async function submitReorderJob(
-  reference: ReorderSequence,
-  draft: ReorderSequence,
-  maxIterations: number,
+export async function submitReorder(
+  config: ReorderClientConfig,
+  request: ReorderRequest,
 ): Promise<ReorderJobCreated> {
-  validateSequenceSizes(reference, draft);
-
-  const response = await fetch('/api/reorder', {
+  const response = await fetch(`${config.baseUrl}/api/reorder`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ reference, draft, maxIterations }),
+    body: JSON.stringify(request),
   });
-
   if (!response.ok) {
-    throw new Error('Failed to submit reorder job');
+    const body: unknown = await response.json().catch(() => ({}));
+    throw new Error(
+      extractErrorMessage(body, `Reorder submission failed (${response.status})`),
+    );
   }
-
-  return response.json() as Promise<ReorderJobCreated>;
+  const data: unknown = await response.json();
+  return data as ReorderJobCreated;
 }
 
 /**
- * Get the current status of a contig reordering job.
- * @throws {Error} on HTTP or network error
+ * Poll the status of a reorder job.
+ *
+ * GET /api/reorder/:jobId/status
  */
-export async function getReorderStatus(jobId: string): Promise<ReorderJobStatus> {
+export async function getReorderStatus(
+  config: ReorderClientConfig,
+  jobId: string,
+): Promise<ReorderJobStatusResponse> {
   const response = await fetch(
-    `/api/reorder/${encodeURIComponent(jobId)}/status`,
+    `${config.baseUrl}/api/reorder/${encodeURIComponent(jobId)}/status`,
   );
-
   if (!response.ok) {
-    throw new Error('Failed to get reorder job status');
+    const body: unknown = await response.json().catch(() => ({}));
+    throw new Error(
+      extractErrorMessage(body, `Failed to get reorder status (${response.status})`),
+    );
   }
-
-  return response.json() as Promise<ReorderJobStatus>;
+  const data: unknown = await response.json();
+  return data as ReorderJobStatusResponse;
 }
 
 /**
- * Download the result of a completed contig reordering job.
- * @throws {Error} on HTTP or network error
+ * Cancel a running or queued reorder job.
+ *
+ * DELETE /api/reorder/:jobId
  */
-export async function getReorderResult(jobId: string): Promise<ReorderResult> {
+export async function cancelReorder(
+  config: ReorderClientConfig,
+  jobId: string,
+): Promise<void> {
   const response = await fetch(
-    `/api/reorder/${encodeURIComponent(jobId)}/result`,
+    `${config.baseUrl}/api/reorder/${encodeURIComponent(jobId)}`,
+    { method: 'DELETE' },
   );
-
   if (!response.ok) {
-    throw new Error('Failed to get reorder result');
+    const body: unknown = await response.json().catch(() => ({}));
+    throw new Error(
+      extractErrorMessage(body, `Failed to cancel reorder job (${response.status})`),
+    );
   }
-
-  return response.json() as Promise<ReorderResult>;
 }
 
 /**
- * Cancel a running or queued contig reordering job.
- * Best-effort — does not throw on failure.
+ * Download the result of a completed reorder job.
+ *
+ * GET /api/reorder/:jobId/result
  */
-export async function cancelReorderJob(jobId: string): Promise<void> {
-  try {
-    await fetch(`/api/reorder/${encodeURIComponent(jobId)}`, {
-      method: 'DELETE',
-    });
-  } catch {
-    // Best-effort — ignore cancellation failures
+export async function getReorderResult(
+  config: ReorderClientConfig,
+  jobId: string,
+): Promise<ReorderResult> {
+  const response = await fetch(
+    `${config.baseUrl}/api/reorder/${encodeURIComponent(jobId)}/result`,
+  );
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => ({}));
+    throw new Error(
+      extractErrorMessage(body, `Failed to get reorder result (${response.status})`),
+    );
   }
+  const data: unknown = await response.json();
+  return data as ReorderResult;
 }
