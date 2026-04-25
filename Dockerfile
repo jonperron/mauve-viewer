@@ -22,6 +22,8 @@ FROM node:24-alpine AS production
 WORKDIR /app
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+COPY bin/linux-x64/ ./bin/linux-x64/
+RUN chmod +x ./bin/linux-x64/mauveAligner ./bin/linux-x64/progressiveMauve
 COPY package.json ./
 EXPOSE 3000
 CMD ["node", "dist/server/index.js"]
