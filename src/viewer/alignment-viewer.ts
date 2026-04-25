@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-import type { XmfaAlignment } from '../import/xmfa/types.ts';
+import type { XmfaAlignment, Lcb } from '../import/xmfa/types.ts';
 import {
   createViewerState,
   applyZoomTransform,
@@ -54,6 +54,9 @@ import type { ContigMap } from '../export/index.ts';
 import type { ContigBoundary } from '../annotations/types.ts';
 import { createHomologExportDialog } from './toolbar/options/homolog-export-dialog.ts';
 import { createSummaryExportDialog } from './toolbar/options/summary-export-dialog.ts';
+import { createLcbWeightSlider } from './lcb-weight-slider.ts';
+import type { LcbWeightSliderHandle } from './lcb-weight-slider.ts';
+import { filterLcbsByWeight, maxLcbWeight } from '../analysis/lcb-filter.ts';
 
 export interface ViewerConfig {
   readonly width: number;
@@ -155,6 +158,8 @@ export function renderAlignment(
   const { width, margin } = config;
   // Mutable color state — held in closure for color scheme callbacks (intentional exception to immutability rule)
   let currentSchemeId: ColorSchemeId = DEFAULT_COLOR_SCHEME_ID;
+  // Mutable filtered LCB list — updated by the weight slider (intentional exception to immutability rule)
+  let filteredLcbs: readonly Lcb[] = lcbs;
 
   // Compute backbone data from LCBs for backbone-dependent color schemes
   const backbone: readonly BackboneSegment[] = lcbs.length > 0
@@ -178,6 +183,7 @@ export function renderAlignment(
 
   // Mutable state — held in closure for D3 callbacks (intentional exception to immutability rule)
   let viewerState = createViewerState(alignment, config, defaultMode);
+  const lcbMaxWeight = maxLcbWeight(lcbs);
 
   // Precompute similarity profile data if blocks are available
   let similarityData: SimilarityProfileData = { profiles: new Map() };
@@ -214,9 +220,9 @@ export function renderAlignment(
     .attr('class', 'alignment-root')
     .attr('transform', `translate(${margin.left},${margin.top})`);
 
-  renderAllPanels(root, viewerState, lcbs, colors, config, optionsState.showGenomeId, similarityData);
+  renderAllPanels(root, viewerState, filteredLcbs, colors, config, optionsState.showGenomeId, similarityData);
   if (viewerState.displayMode === 'lcb') {
-    renderConnectingLines(root, viewerState, lcbs, colors, config);
+    renderConnectingLines(root, viewerState, filteredLcbs, colors, config);
   }
 
   const svgNode = svg.node()!;
@@ -242,7 +248,7 @@ export function renderAlignment(
 
   const zoomHandle = setupZoom(svgNode, viewerState, (transform) => {
     viewerState = applyZoomTransform(viewerState, transform);
-    updatePanelsOnZoom(root, viewerState, lcbs, colors, config, optionsState.showConnectingLines, similarityData);
+    updatePanelsOnZoom(root, viewerState, filteredLcbs, colors, config, optionsState.showConnectingLines, similarityData);
     annotationsHandle?.update(viewerState, {
       showFeatures: optionsState.showFeatures,
       showContigs: optionsState.showContigs,
@@ -294,9 +300,9 @@ export function renderAlignment(
     root.selectAll('*').remove();
     const newHeight = computeTotalHeight(viewerState, config);
     svg.attr('height', newHeight).attr('viewBox', `0 0 ${width} ${newHeight}`);
-    renderAllPanels(root, viewerState, lcbs, colors, config, optionsState.showGenomeId, similarityData);
+    renderAllPanels(root, viewerState, filteredLcbs, colors, config, optionsState.showGenomeId, similarityData);
     if (optionsState.showConnectingLines && viewerState.displayMode === 'lcb') {
-      renderConnectingLines(root, viewerState, lcbs, colors, config);
+      renderConnectingLines(root, viewerState, filteredLcbs, colors, config);
     }
     annotationsHandle?.update(viewerState, {
       showFeatures: optionsState.showFeatures,
@@ -397,6 +403,17 @@ export function renderAlignment(
     },
   );
 
+  // Mutable LCB weight slider handle (intentional exception to immutability rule)
+  let lcbWeightSliderHandle: LcbWeightSliderHandle | undefined;
+  if (lcbs.length > 0) {
+    lcbWeightSliderHandle = createLcbWeightSlider(controlsBar, lcbMaxWeight, {
+      onWeightChange: (minWeight) => {
+        filteredLcbs = filterLcbsByWeight(lcbs, minWeight);
+        rerenderPanels();
+      },
+    }) ?? undefined;
+  }
+
   // Mutable dialog handle — held in closure for export dialog lifecycle (intentional exception to immutability rule)
   let activeDialogHandle: { destroy: () => void } | undefined;
 
@@ -409,8 +426,8 @@ export function renderAlignment(
       optionsState = { ...optionsState, showConnectingLines: enabled };
       if (viewerState.displayMode !== 'lcb') return;
       if (enabled) {
-        renderConnectingLines(root, viewerState, lcbs, colors, config);
-        updateConnectingLinesOnZoom(root, viewerState, lcbs, config);
+        renderConnectingLines(root, viewerState, filteredLcbs, colors, config);
+        updateConnectingLinesOnZoom(root, viewerState, filteredLcbs, config);
       } else {
         root.selectAll('.lcb-lines').remove();
       }
@@ -550,6 +567,7 @@ export function renderAlignment(
       cleanupNavigator?.();
       cleanupPrint();
       cleanupExport();
+      lcbWeightSliderHandle?.destroy();
       shortcutsHelpHandle.destroy();
       regionSelectionHandle.destroy();
       annotationsHandle?.destroy();
