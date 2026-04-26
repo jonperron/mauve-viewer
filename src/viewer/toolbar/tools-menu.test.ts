@@ -23,29 +23,69 @@ describe('createToolsMenu', () => {
     expect(container.querySelector('.tools-menu')).not.toBeNull();
   });
 
-  it('renders a "Tools" toggle button', () => {
+  it('renders an "Analysis" toggle button', () => {
     const container = createContainer();
     createToolsMenu(container, {});
 
     const btn = container.querySelector('.tools-menu-toggle') as HTMLButtonElement;
     expect(btn).not.toBeNull();
-    expect(btn.textContent).toBe('Tools');
+    expect(btn.textContent).toBe('Analysis');
   });
 
-  it('toggle button is disabled when no callbacks provided', () => {
+  it('panel is hidden when no callbacks provided', () => {
     const container = createContainer();
     createToolsMenu(container, {});
 
-    const btn = container.querySelector('.tools-menu-toggle') as HTMLButtonElement;
-    expect(btn.disabled).toBe(true);
+    const panel = container.querySelector('.tools-menu') as HTMLElement;
+    expect(panel.style.display).toBe('none');
   });
 
-  it('toggle button is enabled when at least one callback is provided', () => {
+  it('panel is visible when at least one callback is provided', () => {
     const container = createContainer();
     createToolsMenu(container, { onOrderContigs: vi.fn() });
 
+    const panel = container.querySelector('.tools-menu') as HTMLElement;
+    expect(panel.style.display).not.toBe('none');
+  });
+
+  it('panel is visible when onAlignGenomes is provided', () => {
+    const container = createContainer();
+    createToolsMenu(container, { onAlignGenomes: vi.fn() });
+
+    const panel = container.querySelector('.tools-menu') as HTMLElement;
+    expect(panel.style.display).not.toBe('none');
+  });
+
+  it('renders "Align Genomes" action when onAlignGenomes is provided', () => {
+    const container = createContainer();
+    createToolsMenu(container, { onAlignGenomes: vi.fn() });
+
+    const actionBtns = container.querySelectorAll('.tools-menu-action-btn');
+    const labels = Array.from(actionBtns).map((b) => b.textContent);
+    expect(labels).toContain('Align Genomes');
+  });
+
+  it('"Align Genomes" appears before "Order Contigs" when both are provided', () => {
+    const container = createContainer();
+    createToolsMenu(container, { onAlignGenomes: vi.fn(), onOrderContigs: vi.fn() });
+
+    const actionBtns = container.querySelectorAll('.tools-menu-action-btn');
+    const labels = Array.from(actionBtns).map((b) => b.textContent);
+    expect(labels).toEqual(['Align Genomes', 'Order Contigs']);
+  });
+
+  it('clicking "Align Genomes" invokes callback', () => {
+    const onAlignGenomes = vi.fn();
+    const container = createContainer();
+    createToolsMenu(container, { onAlignGenomes });
+
     const btn = container.querySelector('.tools-menu-toggle') as HTMLButtonElement;
-    expect(btn.disabled).toBe(false);
+    btn.click();
+
+    const actionBtn = container.querySelector('.tools-menu-action-btn') as HTMLButtonElement;
+    actionBtn.click();
+
+    expect(onAlignGenomes).toHaveBeenCalledOnce();
   });
 
   it('renders "Order Contigs" action when onOrderContigs is provided', () => {
@@ -117,6 +157,7 @@ describe('createToolsMenu', () => {
     const btn = container.querySelector('.tools-menu-toggle') as HTMLButtonElement;
     btn.click();
 
+    // Order Contigs is the only button when onAlignGenomes is not provided
     const actionBtn = container.querySelector('.tools-menu-action-btn') as HTMLButtonElement;
     actionBtn.click();
 

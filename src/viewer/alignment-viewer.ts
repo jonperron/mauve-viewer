@@ -56,6 +56,12 @@ import { createHomologExportDialog } from './toolbar/options/homolog-export-dial
 import { createToolsMenu } from './toolbar/tools-menu.ts';
 import type { ToolsMenuHandle } from './toolbar/tools-menu.ts';
 import { createReorderDialog } from '../contig-reorder/reorder-dialog.ts';
+import {
+  createAlignmentDialog,
+  createAlignmentProgress,
+  submitAlignment,
+  getAlignmentResult,
+} from '../alignment/index.ts';
 import { createSummaryExportDialog } from './toolbar/options/summary-export-dialog.ts';
 import { createLcbWeightSlider } from './lcb-weight-slider.ts';
 import type { LcbWeightSliderHandle } from './lcb-weight-slider.ts';
@@ -556,6 +562,31 @@ export function renderAlignment(
     : undefined;
 
   const toolsMenuHandle = createToolsMenu(controlsBar, {
+    onAlignGenomes: () => {
+      activeDialogHandle?.destroy();
+      activeDialogHandle = createAlignmentDialog(container, [], async (result) => {
+        activeDialogHandle?.destroy();
+        activeDialogHandle = undefined;
+        const config = { baseUrl: '' } as const;
+        let jobId: string;
+        try {
+          const created = await submitAlignment(config, { sequences: result.sequences, params: result.params });
+          jobId = created.jobId;
+        } catch {
+          return;
+        }
+        activeDialogHandle = createAlignmentProgress(container, config, jobId, {
+          onComplete: async (completedJobId) => {
+            try {
+              const xmfa = await getAlignmentResult(config, completedJobId);
+              downloadTextFile(xmfa, 'alignment.xmfa', 'text/plain');
+            } catch {
+              // ignore — result download is best-effort
+            }
+          },
+        });
+      });
+    },
     onOrderContigs: () => {
       activeDialogHandle?.destroy();
       activeDialogHandle = createReorderDialog(container);
