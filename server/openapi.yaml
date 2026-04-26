@@ -20,6 +20,8 @@ tags:
     description: Genome alignment job management
   - name: reorder
     description: Contig reordering (Mauve Contig Mover)
+  - name: scoring
+    description: Assembly quality scoring
 
 paths:
   /api/health:
@@ -316,6 +318,129 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReorderResult"
+        "404":
+          description: Result not available (job not completed or not found).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: Result not available
+
+  /api/score:
+    post:
+      tags: [scoring]
+      summary: Submit assembly scoring job
+      description: >
+        Submits a new assembly scoring job. Requires a reference genome and a
+        draft assembly in FASTA or GenBank format. The server aligns the two
+        sequences using progressiveMauve with fast scoring defaults
+        (--skip-refinement --weight=200) and returns the XMFA alignment for
+        client-side metric computation.
+      operationId: submitScore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScoringRequest"
+      responses:
+        "201":
+          description: Job created and queued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoringJobCreated"
+        "400":
+          description: Invalid request — missing or malformed fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missingReference:
+                  summary: Missing reference sequence
+                  value:
+                    error: "reference: must be an object"
+                missingAssembly:
+                  summary: Missing assembly sequence
+                  value:
+                    error: "assembly: must be an object"
+                invalidFormat:
+                  summary: Unsupported sequence format
+                  value:
+                    error: "assembly: format must be fasta or genbank"
+                invalidWeight:
+                  summary: Non-positive weight value
+                  value:
+                    error: "options.weight: must be a positive number"
+
+  /api/score/{jobId}/status:
+    get:
+      tags: [scoring]
+      summary: Get scoring job status
+      description: Returns the current lifecycle status of a scoring job and any error message.
+      operationId: getScoreStatus
+      parameters:
+        - $ref: "#/components/parameters/jobId"
+      responses:
+        "200":
+          description: Job status retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoringJobStatusResponse"
+        "404":
+          description: Job not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: Job not found
+
+  /api/score/{jobId}:
+    delete:
+      tags: [scoring]
+      summary: Cancel scoring job
+      description: >
+        Cancels a running or queued scoring job. Sends SIGTERM to the
+        alignment process if running. Returns 204 on success, 409 if the job
+        is already completed, failed, or cancelled.
+      operationId: cancelScore
+      parameters:
+        - $ref: "#/components/parameters/jobId"
+      responses:
+        "204":
+          description: Job cancelled successfully.
+        "409":
+          description: Job cannot be cancelled (already finished).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: Job cannot be cancelled
+
+  /api/score/{jobId}/result:
+    get:
+      tags: [scoring]
+      summary: Download scoring result
+      description: >
+        Returns the XMFA alignment of the reference vs. assembly as a JSON
+        object. Only available after the job reaches the `completed` status.
+        The client uses this alignment to compute structural, sequence, contig,
+        CDS, and content metrics client-side.
+      operationId: getScoreResult
+      parameters:
+        - $ref: "#/components/parameters/jobId"
+      responses:
+        "200":
+          description: Scoring result containing the XMFA alignment.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoringResult"
         "404":
           description: Result not available (job not completed or not found).
           content:
@@ -652,4 +777,114 @@ components:
           type: string
           description: Contents of the final *_contigs.tab file.
           example: "Contigs to reverse:\ncontig1\nOrdered contigs:\ncontig2\tcontig1\n"
+
+    ScoringSequenceFormat:
+      type: string
+      description: Supported input formats for assembly scoring sequences.
+      enum: [fasta, genbank]
+      example: fasta
+
+    ScoringSequenceInput:
+      type: object
+      description: An input genome sequence for assembly scoring.
+      required: [name, content, format]
+      properties:
+        name:
+          type: string
+          description: Original filename of the sequence.
+          example: reference.gbk
+        content:
+          type: string
+          description: Full text content of the sequence file (max 50 MB).
+          example: ">ref\nATCGATCG"
+        format:
+          $ref: "#/components/schemas/ScoringSequenceFormat"
+
+    ScoringOptions:
+      type: object
+      description: Optional parameters controlling the scoring job.
+      properties:
+        batch:
+          type: boolean
+          default: false
+          description: Run in batch mode (non-interactive, no GUI output).
+          example: false
+        noCds:
+          type: boolean
+          default: false
+          description: Skip CDS error analysis (frameshifts, premature stops).
+          example: false
+        skipRefinement:
+          type: boolean
+          default: true
+          description: >
+            Skip iterative alignment refinement. Enabled by default for
+            faster scoring-grade alignment.
+          example: true
+        weight:
+          type: number
+          minimum: 1
+          default: 200
+          description: Minimum LCB weight threshold for the scoring alignment.
+          example: 200
+
+    ScoringRequest:
+      type: object
+      description: Request body for submitting a new assembly scoring job.
+      required: [reference, assembly]
+      properties:
+        reference:
+          $ref: "#/components/schemas/ScoringSequenceInput"
+        assembly:
+          $ref: "#/components/schemas/ScoringSequenceInput"
+        options:
+          $ref: "#/components/schemas/ScoringOptions"
+
+    ScoringJobStatus:
+      type: string
+      description: Lifecycle state of an assembly scoring job.
+      enum: [queued, running, completed, failed, cancelled]
+      example: running
+
+    ScoringJobCreated:
+      type: object
+      description: Response returned when a scoring job is successfully created.
+      required: [jobId, status]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+          description: Unique identifier assigned to the new job.
+          example: 550e8400-e29b-41d4-a716-446655440000
+        status:
+          $ref: "#/components/schemas/ScoringJobStatus"
+
+    ScoringJobStatusResponse:
+      type: object
+      description: Status information for an assembly scoring job.
+      required: [jobId, status]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+          description: Unique identifier of the job.
+          example: 550e8400-e29b-41d4-a716-446655440000
+        status:
+          $ref: "#/components/schemas/ScoringJobStatus"
+        error:
+          type: string
+          description: Error message if the job failed.
+          example: "Scoring process exited with code 1"
+
+    ScoringResult:
+      type: object
+      description: Result of a completed assembly scoring job.
+      required: [alignment]
+      properties:
+        alignment:
+          type: string
+          description: >
+            XMFA-formatted alignment of the reference genome vs. the draft
+            assembly. Used by the client to compute all quality metrics.
+          example: "#FormatVersion Mauve1\n> 1:1-1000 + ref.fasta\nATCG\n=\n"
 

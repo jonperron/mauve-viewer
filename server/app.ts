@@ -8,12 +8,15 @@ import {
 } from './alignment/routes.js';
 import { ReorderJobManager, type ReorderJobManagerConfig } from './contig-reorder/job-manager.js';
 import { registerReorderRoutes } from './contig-reorder/routes.js';
+import { ScoringJobManager, type ScoringJobManagerConfig } from './scoring/job-manager.js';
+import { registerScoringRoutes } from './scoring/routes.js';
 
 export interface ServerOptions {
   readonly logger: boolean;
   readonly staticRoot: string;
   readonly alignment?: JobManagerConfig;
   readonly contigReorder?: ReorderJobManagerConfig;
+  readonly scoring?: ScoringJobManagerConfig;
 }
 
 export function buildApp(options: ServerOptions): FastifyInstance {
@@ -38,6 +41,11 @@ export function buildApp(options: ServerOptions): FastifyInstance {
   if (options.contigReorder) {
     const reorderManager = new ReorderJobManager(options.contigReorder);
     registerReorderRoutes(app, reorderManager);
+  }
+
+  if (options.scoring) {
+    const scoringManager = new ScoringJobManager(options.scoring);
+    registerScoringRoutes(app, scoringManager);
   }
 
   app.setNotFoundHandler(async (request, reply) => {
