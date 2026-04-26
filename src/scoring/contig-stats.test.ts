@@ -8,7 +8,6 @@ import type { XmfaAlignment } from '../import/xmfa/types.ts';
 
 function makeAlignment(
   genomeLengths: number[],
-  refGenomeIdx = 0,
 ): XmfaAlignment {
   const genomes = genomeLengths.map((len, i) => ({
     index: i,
@@ -128,7 +127,7 @@ describe('computeContigStats', () => {
     // genome 0 = contig 400, genome 1 = reference, genome 2 = contig 600
     // assembly contigs = [400, 600], total = 1000
     // N50: sorted desc [600, 400]; cum 600 >= 500 → N50 = 600
-    const alignment = makeAlignment([400, 1000, 600], 1);
+    const alignment = makeAlignment([400, 1000, 600]);
     const stats = computeContigStats(alignment, 1);
     expect(stats.n50).toBe(600);
     expect(stats.minLength).toBe(400);
