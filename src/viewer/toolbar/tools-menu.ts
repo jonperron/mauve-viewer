@@ -1,5 +1,6 @@
-/** Callbacks for tools actions — undefined means the action is unavailable */
+/** Callbacks for analysis actions — undefined means the action is unavailable */
 export interface ToolsMenuCallbacks {
+  readonly onAlignGenomes?: () => void;
   readonly onOrderContigs?: () => void;
 }
 
@@ -15,14 +16,15 @@ interface ToolsButtonDef {
 }
 
 const TOOLS_BUTTON_DEFS: readonly ToolsButtonDef[] = [
+  { key: 'onAlignGenomes', label: 'Align Genomes' },
   { key: 'onOrderContigs', label: 'Order Contigs' },
 ];
 
 /**
- * Create a Tools dropdown menu in the viewer controls bar.
+ * Create an Analysis dropdown menu in the viewer controls bar.
  *
- * Renders a "Tools" toggle button that reveals a dropdown of available
- * tool actions. Actions whose callbacks are undefined are hidden.
+ * Renders an "Analysis" toggle button that reveals a dropdown of available
+ * analysis actions. Actions whose callbacks are undefined are hidden.
  * If no callbacks are defined, the toggle is disabled.
  */
 export function createToolsMenu(
@@ -39,11 +41,11 @@ export function createToolsMenu(
   const btn = document.createElement('button');
   btn.className = 'tools-menu-toggle';
   btn.type = 'button';
-  btn.textContent = 'Tools';
-  btn.setAttribute('aria-label', 'Toggle tools menu');
+  btn.textContent = 'Analysis';
+  btn.setAttribute('aria-label', 'Toggle analysis menu');
 
   if (activeButtons.length === 0) {
-    btn.disabled = true;
+    panel.style.display = 'none';
   }
 
   panel.appendChild(btn);
