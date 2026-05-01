@@ -1,31 +1,4 @@
-## Purpose
-
-Defines integration with external systems: Chado biological database read/write, RMI remote control for programmatic viewer navigation, Gaggle system bus for inter-tool data exchange, and database cross-reference link generation.
-## Requirements
-### Requirement: Chado database integration
-The system SHALL support reading and writing genomic features from/to Chado biological databases via ChadoDB connection, ChadoReader/ChadoWriter, and ChadoFeatureLoader.
-
-#### Scenario: Load features from Chado
-- **WHEN** a Chado database connection is configured and features are requested
-- **THEN** system loads annotated features from the database and makes them available for visualization
-
-### Requirement: RMI remote control
-The system SHALL support remote control via Java RMI, enabled by the system property `mauve.enable.remote`. The remote interface allows programmatic navigation to specific alignment positions via `setFocus(alignID, sequenceID, start, end, auth_token, contig)`.
-
-#### Scenario: Navigate via remote control
-- **WHEN** an external application calls setFocus with valid parameters on the RMI interface
-- **THEN** system navigates the viewer to the specified position in the specified alignment
-
-#### Scenario: Enable remote control
-- **WHEN** Mauve is launched with `-Dmauve.enable.remote=true`
-- **THEN** system starts the RMI server and accepts remote control connections
-
-### Requirement: Gaggle system bus integration
-The system SHALL support data exchange with other genome analysis tools via the Gaggle system bus using D-Bus communication.
-
-#### Scenario: Exchange data via Gaggle
-- **WHEN** Mauve is connected to the Gaggle bus and another tool broadcasts genome data
-- **THEN** system receives and can act on the broadcast data
+## MODIFIED Requirements
 
 ### Requirement: Database cross-reference links
 The system SHALL resolve `db_xref` qualifier values in GenBank/GFF features to clickable hyperlinks in the feature detail tooltip. Each semicolon-separated `Database:ID` token SHALL be mapped to a URL for the following supported databases: GeneID (NCBI Gene), UniProtKB / UniProtKB/Swiss-Prot / UniProtKB/TrEMBL (UniProt), PDB (RCSB), GO (QuickGO), InterPro (EBI), and KEGG. Unrecognized database prefixes SHALL be silently ignored. Identifier values SHALL be percent-encoded before being interpolated into URLs. The raw `db_xref` qualifier text SHALL NOT be shown in the generic "other qualifiers" section when cross-reference links are rendered.
@@ -77,4 +50,3 @@ The system SHALL resolve `db_xref` qualifier values in GenBank/GFF features to c
 #### Scenario: Raw db_xref suppressed
 - **WHEN** cross-reference links are rendered for a feature
 - **THEN** the raw `db_xref` string is NOT shown in the generic "other qualifiers" section of the tooltip
-

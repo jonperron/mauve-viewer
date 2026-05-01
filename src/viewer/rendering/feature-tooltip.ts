@@ -1,4 +1,5 @@
 import type { GenomicFeature } from '../../annotations/types.ts';
+import { parseDbXrefLinks, type DbXrefLink } from './db-xref-links.ts';
 
 /** Handle for the feature tooltip element */
 export interface FeatureTooltipHandle {
@@ -6,6 +7,11 @@ export interface FeatureTooltipHandle {
   readonly showDetails: (feature: GenomicFeature, event: MouseEvent) => void;
   readonly hide: () => void;
   readonly destroy: () => void;
+}
+
+function renderDbXrefLink(link: DbXrefLink): string {
+  const safeUrl = link.url;
+  return `<div><a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)}</a></div>`;
 }
 
 export function escapeHtml(text: string): string {
@@ -49,30 +55,28 @@ export function buildDetailContent(feature: GenomicFeature): string {
     lines.push(`<div>Product: ${escapeHtml(product)}</div>`);
   }
 
-  // Show all other qualifiers
+  // Show all other qualifiers (skip db_xref — rendered as links below)
   for (const [key, value] of Object.entries(feature.qualifiers)) {
-    if (key === 'gene' || key === 'product' || key === 'locus_tag' || key === 'translation') continue;
+    if (key === 'gene' || key === 'product' || key === 'locus_tag' || key === 'translation' || key === 'db_xref') continue;
     lines.push(`<div>${escapeHtml(key)}: ${escapeHtml(value)}</div>`);
   }
 
-  // NCBI Entrez link if there's a protein_id or db_xref with GI/GeneID
+  // NCBI Protein link from protein_id qualifier
   const proteinId = feature.qualifiers['protein_id'];
   if (proteinId) {
     const safeId = encodeURIComponent(proteinId);
     lines.push(
-      `<div><a href="https://www.ncbi.nlm.nih.gov/protein/${safeId}" target="_blank" rel="noopener noreferrer">NCBI Protein</a></div>`,
+      `<div><a href="https://www.ncbi.nlm.nih.gov/protein/${safeId}" target="_blank" rel="noopener noreferrer">NCBI Protein: ${escapeHtml(proteinId)}</a></div>`,
     );
   }
 
-  const geneId = feature.qualifiers['db_xref']
-    ?.split(';')
-    .map((x) => x.trim())
-    .find((x) => x.startsWith('GeneID:'));
-  if (geneId) {
-    const id = encodeURIComponent(geneId.slice('GeneID:'.length));
-    lines.push(
-      `<div><a href="https://www.ncbi.nlm.nih.gov/gene/${id}" target="_blank" rel="noopener noreferrer">NCBI Gene</a></div>`,
-    );
+  // Database cross-reference links from db_xref qualifier
+  const dbXref = feature.qualifiers['db_xref'];
+  if (dbXref) {
+    const xrefLinks = parseDbXrefLinks(dbXref);
+    for (const link of xrefLinks) {
+      lines.push(renderDbXrefLink(link));
+    }
   }
 
   return lines.join('');
