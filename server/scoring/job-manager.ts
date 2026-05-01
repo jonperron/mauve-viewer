@@ -168,7 +168,7 @@ export class ScoringJobManager {
         [refPath, asmPath],
       );
 
-      const [cmd, ...cmdArgs] = args as string[];
+      const [cmd, ...cmdArgs] = args as [string, ...string[]];
       const child = this.io.spawn(cmd, cmdArgs, {
         cwd: job.jobDir,
         stdio: ['ignore', 'ignore', 'pipe'],
