@@ -262,10 +262,10 @@ describe('ReorderJobManager.getResult', () => {
     const mockProc = createMockProcess();
     io.spawn.mockReturnValue(mockProc as never);
 
-    io.readdir.mockResolvedValue(['draft_contigs.tab', 'draft.fasta', 'alignment3'] as never);
-    io.readFile
-      .mockResolvedValueOnce('>draft_reordered\nGCTA' as never)
-      .mockResolvedValueOnce('tab-content' as never);
+    (io.readdir as ReturnType<typeof vi.fn>).mockResolvedValue(['draft_contigs.tab', 'draft.fasta', 'alignment3']);
+    (io.readFile as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce('>draft_reordered\nGCTA')
+      .mockResolvedValueOnce('tab-content');
 
     const jobId = await manager.submit(validRequest);
     mockProc.stdout.emit('data', Buffer.from('C: 3\n'));
