@@ -110,6 +110,68 @@ describe('buildDetailContent', () => {
     expect(content).toContain('https://www.ncbi.nlm.nih.gov/gene/12345');
   });
 
+  it('includes UniProt link when db_xref with UniProtKB present', () => {
+    const content = buildDetailContent(
+      makeFeature({ qualifiers: { db_xref: 'UniProtKB:P12345' } }),
+    );
+    expect(content).toContain('https://www.uniprot.org/uniprot/P12345');
+    expect(content).toContain('target="_blank"');
+    expect(content).toContain('rel="noopener noreferrer"');
+  });
+
+  it('includes UniProt link for UniProtKB/Swiss-Prot prefix', () => {
+    const content = buildDetailContent(
+      makeFeature({ qualifiers: { db_xref: 'UniProtKB/Swiss-Prot:P12345' } }),
+    );
+    expect(content).toContain('https://www.uniprot.org/uniprot/P12345');
+  });
+
+  it('includes PDB link when db_xref with PDB present', () => {
+    const content = buildDetailContent(
+      makeFeature({ qualifiers: { db_xref: 'PDB:1ABC' } }),
+    );
+    expect(content).toContain('https://www.rcsb.org/structure/1ABC');
+  });
+
+  it('includes GO link when db_xref with GO present', () => {
+    const content = buildDetailContent(
+      makeFeature({ qualifiers: { db_xref: 'GO:0006412' } }),
+    );
+    expect(content).toContain('https://www.ebi.ac.uk/QuickGO/term/GO:0006412');
+  });
+
+  it('includes InterPro link when db_xref with InterPro present', () => {
+    const content = buildDetailContent(
+      makeFeature({ qualifiers: { db_xref: 'InterPro:IPR001234' } }),
+    );
+    expect(content).toContain('https://www.ebi.ac.uk/interpro/entry/InterPro/IPR001234/');
+  });
+
+  it('includes KEGG link when db_xref with KEGG present', () => {
+    const content = buildDetailContent(
+      makeFeature({ qualifiers: { db_xref: 'KEGG:eco:b0001' } }),
+    );
+    expect(content).toContain('https://www.genome.jp/dbget-bin/www_bget?eco:b0001');
+  });
+
+  it('renders multiple db_xref links from semicolon-separated values', () => {
+    const content = buildDetailContent(
+      makeFeature({
+        qualifiers: { db_xref: 'GeneID:12345; UniProtKB:P12345; PDB:1ABC' },
+      }),
+    );
+    expect(content).toContain('https://www.ncbi.nlm.nih.gov/gene/12345');
+    expect(content).toContain('https://www.uniprot.org/uniprot/P12345');
+    expect(content).toContain('https://www.rcsb.org/structure/1ABC');
+  });
+
+  it('does not render db_xref raw in qualifier list', () => {
+    const content = buildDetailContent(
+      makeFeature({ qualifiers: { db_xref: 'GeneID:12345' } }),
+    );
+    expect(content).not.toContain('db_xref: GeneID');
+  });
+
   it('skips translation qualifier', () => {
     const content = buildDetailContent(
       makeFeature({
