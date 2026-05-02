@@ -36,13 +36,10 @@ When you load a JSON alignment file containing PATRIC genome identifiers (format
 
 ### Analysis
 
-The following analysis features are accessible from the **Analysis** menu in the viewer toolbar (server required) or via the REST API.
-
-- [Genome Alignment](genome-alignment.md) — Align two or more genome sequences from scratch using mauveAligner or progressiveMauve
-- [Contig Reordering](contig-reorder.md) — Reorder draft assembly contigs relative to a reference genome using the Mauve Contig Mover
-- [Data Export](export.md) — Export SNPs, gaps, permutations, positional orthologs, identity matrix, CDS errors, and summary reports from a loaded alignment
-
-Assembly scoring (structural and sequence-level metrics for a draft assembly against a reference) is available via `POST /api/score` on the server API only.
+- [Genome Alignment](genome-alignment.md) — Align two or more genome sequences from scratch using mauveAligner or progressiveMauve (accessible from the **Analysis** menu; server required)
+- [Contig Reordering](contig-reorder.md) — Reorder draft assembly contigs relative to a reference genome using the Mauve Contig Mover (accessible from the **Analysis** menu; server required)
+- [Assembly Scoring](assembly-scoring.md) — Evaluate draft assembly quality against a reference: structural distances, sequence metrics, contig statistics, CDS quality, and content metrics (REST API only; server required)
+- [Rearrangement Analysis](rearrangement-analysis.md) — Compute DCJ/GRIMM distances, backbone segments, similarity index, and recombination events from a loaded alignment (developer API)
 
 ### Output
 
