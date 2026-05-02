@@ -13,7 +13,7 @@ import type { AnnotationMap } from '../../viewer/rendering/annotations.ts';
 import { parseXmfa } from '../xmfa/index.ts';
 import type { XmfaAlignment } from '../xmfa/types.ts';
 
-const MAX_FILE_SIZE = 500 * 1024 * 1024;
+const MAX_FILE_SIZE = 1024 * 1024 * 1024;
 
 const ALIGNMENT_FORMATS: ReadonlySet<FileFormat> = new Set(['xmfa', 'json', 'mauve']);
 const ANNOTATION_FORMATS: ReadonlySet<FileFormat> = new Set(['genbank', 'embl', 'xml']);
