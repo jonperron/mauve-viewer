@@ -53,7 +53,7 @@ Mauve Viewer detects the file format from the file extension. If the extension i
 
 | Limit | Value |
 |-------|-------|
-| Maximum file size | 500 MB |
+| Maximum file size | 1 GB |
 | Maximum entries or blocks | 100,000 |
 | Maximum sequence length | 100 MB |
 
