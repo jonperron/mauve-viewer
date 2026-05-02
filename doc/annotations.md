@@ -35,12 +35,28 @@ Hover over a feature to see a tooltip with:
 
 ## Click Detail Popup
 
-Click on a feature to open a detail popup with full annotation information. The popup includes clickable links to external databases when available:
+Click on a feature to open a detail popup with full annotation information. The popup includes clickable links to external databases when available.
 
-- **protein_id** — Links to the NCBI protein record
-- **GeneID** (from db_xref) — Links to the NCBI Gene record
+### protein_id Links
 
-All user-provided text in tooltips and popups is sanitized to prevent cross-site scripting (XSS).
+If the feature has a `protein_id` qualifier, the popup includes a link to the NCBI protein record.
+
+### db_xref Links
+
+`db_xref` qualifiers (format: `Database:ID`) are resolved to clickable hyperlinks. Multiple cross-references in a single qualifier are separated by semicolons; each recognized entry is rendered as a separate link.
+
+| Database prefix | Link destination |
+|----------------|-----------------|
+| `GeneID` | NCBI Gene |
+| `UniProtKB` | UniProt |
+| `UniProtKB/Swiss-Prot` | UniProt |
+| `UniProtKB/TrEMBL` | UniProt |
+| `PDB` | RCSB Protein Data Bank |
+| `GO` | EBI QuickGO |
+| `InterPro` | EBI InterPro |
+| `KEGG` | KEGG (identifier must match `organism:entry` format, e.g. `eco:b0001`) |
+
+Unrecognized database prefixes are silently ignored. Links open in a new browser tab. The raw `db_xref` text is not shown separately when cross-reference links are rendered.
 
 ## Contig Boundaries
 
