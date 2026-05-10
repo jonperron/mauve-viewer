@@ -173,6 +173,62 @@
     .options-action-btn:hover {
       background: #e8f0fe;
     }
+    .tools-menu {
+      display: inline-block;
+      position: relative;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .tools-menu-toggle {
+      height: 32px;
+      padding: 0 12px;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .tools-menu-toggle:hover {
+      background: #e0e0e0;
+      border-color: #999;
+    }
+    .tools-menu-toggle:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+    .tools-menu-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      z-index: 100;
+      min-width: 180px;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      padding: 6px 0;
+      margin-top: 2px;
+    }
+    .tools-menu-dropdown.show {
+      display: block;
+    }
+    .tools-menu-action-btn {
+      display: block;
+      width: 100%;
+      padding: 6px 12px;
+      border: none;
+      background: none;
+      text-align: left;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      color: #333;
+    }
+    .tools-menu-action-btn:hover {
+      background: #e8f0fe;
+    }
     .export-menu {
       display: inline-block;
       position: relative;
