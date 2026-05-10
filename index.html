@@ -699,6 +699,237 @@
       box-shadow: 0 1px 0 #bbb;
       color: #333;
     }
+    /* Assembly Scoring Report dialog */
+    .scoring-report-dialog {
+      border: none;
+      border-radius: 10px;
+      padding: 0;
+      width: 560px;
+      max-width: 95vw;
+      max-height: 85vh;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .scoring-report-dialog::backdrop {
+      background: rgba(0, 0, 0, 0.45);
+    }
+    .scoring-report-content {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      max-height: 85vh;
+    }
+    .scoring-report-title {
+      margin: 0;
+      padding: 16px 20px 14px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1a1a2e;
+      background: #f8f9fb;
+      border-bottom: 1px solid #e0e4ea;
+      letter-spacing: 0.01em;
+    }
+    /* Tabs */
+    .scoring-tabs {
+      display: flex;
+      background: #f0f2f5;
+      border-bottom: 1px solid #dde1e8;
+      padding: 0 8px;
+      gap: 2px;
+    }
+    .scoring-tab-btn {
+      flex: 1;
+      padding: 8px 6px;
+      border: none;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      color: #666;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      border-radius: 4px 4px 0 0;
+      white-space: nowrap;
+    }
+    .scoring-tab-btn:hover {
+      color: #4a90d9;
+      background: rgba(74, 144, 217, 0.07);
+    }
+    .scoring-tab-btn.scoring-tab-active {
+      color: #4a90d9;
+      border-bottom-color: #4a90d9;
+      font-weight: 600;
+      background: #fff;
+    }
+    /* Panels */
+    .scoring-panels {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      background: #fff;
+    }
+    .scoring-tab-panel h4 {
+      margin: 16px 0 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .scoring-tab-panel h4:first-child {
+      margin-top: 0;
+    }
+    /* Metrics table */
+    .scoring-metrics-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+    .scoring-metrics-table tbody tr {
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.1s;
+    }
+    .scoring-metrics-table tbody tr:last-child {
+      border-bottom: none;
+    }
+    .scoring-metrics-table tbody tr:hover {
+      background: #f7f9fc;
+    }
+    .scoring-metric-label {
+      padding: 6px 8px 6px 0;
+      color: #555;
+      width: 65%;
+    }
+    .scoring-metric-value {
+      padding: 6px 0 6px 8px;
+      font-weight: 600;
+      color: #222;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    /* Substitution matrix */
+    .scoring-matrix-hint {
+      font-size: 11px;
+      color: #888;
+      margin-bottom: 8px;
+    }
+    .scoring-substitution-matrix {
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .scoring-substitution-matrix th,
+    .scoring-substitution-matrix td {
+      padding: 5px 10px;
+      text-align: center;
+      border: 1px solid #e0e4ea;
+    }
+    .scoring-substitution-matrix thead th {
+      background: #f0f2f5;
+      font-weight: 600;
+      color: #555;
+    }
+    .scoring-substitution-matrix tbody th {
+      background: #f0f2f5;
+      font-weight: 600;
+      color: #555;
+    }
+    .scoring-substitution-matrix tbody td {
+      font-variant-numeric: tabular-nums;
+      color: #333;
+    }
+    /* Contig & CDS tables */
+    .scoring-contig-lengths-table,
+    .scoring-broken-cds-table,
+    .scoring-missing-chr-table,
+    .scoring-extra-contigs-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .scoring-contig-lengths-table thead tr,
+    .scoring-broken-cds-table thead tr,
+    .scoring-missing-chr-table thead tr,
+    .scoring-extra-contigs-table thead tr {
+      background: #f0f2f5;
+    }
+    .scoring-contig-lengths-table th,
+    .scoring-broken-cds-table th,
+    .scoring-missing-chr-table th,
+    .scoring-extra-contigs-table th {
+      padding: 6px 10px;
+      text-align: left;
+      font-weight: 600;
+      color: #555;
+      border-bottom: 1px solid #dde1e8;
+    }
+    .scoring-contig-lengths-table td,
+    .scoring-broken-cds-table td,
+    .scoring-missing-chr-table td,
+    .scoring-extra-contigs-table td {
+      padding: 5px 10px;
+      border-bottom: 1px solid #f0f0f0;
+      color: #333;
+      font-variant-numeric: tabular-nums;
+    }
+    .scoring-contig-lengths-table tbody tr:last-child td,
+    .scoring-broken-cds-table tbody tr:last-child td,
+    .scoring-missing-chr-table tbody tr:last-child td,
+    .scoring-extra-contigs-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    .scoring-contig-lengths-table tbody tr:hover td,
+    .scoring-broken-cds-table tbody tr:hover td,
+    .scoring-missing-chr-table tbody tr:hover td,
+    .scoring-extra-contigs-table tbody tr:hover td {
+      background: #f7f9fc;
+    }
+    /* Empty state */
+    .scoring-empty {
+      font-size: 13px;
+      color: #aaa;
+      padding: 4px 0;
+      font-style: italic;
+    }
+    /* Action bar */
+    .scoring-report-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 12px 20px;
+      background: #f8f9fb;
+      border-top: 1px solid #e0e4ea;
+    }
+    .scoring-export-btn,
+    .scoring-close-btn {
+      height: 32px;
+      padding: 0 16px;
+      border-radius: 5px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .scoring-export-btn {
+      background: #4a90d9;
+      color: #fff;
+      border: 1px solid #3a7bc8;
+    }
+    .scoring-export-btn:hover {
+      background: #3a7bc8;
+    }
+    .scoring-close-btn {
+      background: #f5f5f5;
+      color: #444;
+      border: 1px solid #ccc;
+    }
+    .scoring-close-btn:hover {
+      background: #e8e8e8;
+      border-color: #bbb;
+    }
   </style>
 </head>
 <body>
