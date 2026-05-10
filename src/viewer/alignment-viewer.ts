@@ -66,6 +66,12 @@ import { createSummaryExportDialog } from './toolbar/options/summary-export-dial
 import { createLcbWeightSlider } from './lcb-weight-slider.ts';
 import type { LcbWeightSliderHandle } from './lcb-weight-slider.ts';
 import { filterLcbsByWeight, maxLcbWeight } from '../analysis/lcb-filter.ts';
+import { computeStructuralMetrics } from '../scoring/structural-metrics.ts';
+import { computeSequenceMetrics } from '../scoring/sequence-metrics.ts';
+import { computeContigStats } from '../scoring/contig-stats.ts';
+import { computeCdsQualityMetrics } from '../scoring/cds-quality.ts';
+import { computeContentMetrics } from '../scoring/content-metrics.ts';
+import { createScoringReport } from '../scoring/scoring-report.ts';
 
 export interface ViewerConfig {
   readonly width: number;
@@ -591,6 +597,21 @@ export function renderAlignment(
       activeDialogHandle?.destroy();
       activeDialogHandle = createReorderDialog(container);
     },
+    onScoreAssembly: alignment.genomes.length === 2 ? () => {
+      activeDialogHandle?.destroy();
+      const refGenomeIdx = viewerState.referenceGenomeIndex;
+      const annotationMap = annotations ?? new Map();
+      const metrics = {
+        structural: computeStructuralMetrics(alignment, refGenomeIdx),
+        sequence: computeSequenceMetrics(alignment, refGenomeIdx),
+        contigs: computeContigStats(alignment, refGenomeIdx),
+        cds: computeCdsQualityMetrics(alignment, annotationMap),
+        content: computeContentMetrics(alignment, annotationMap, refGenomeIdx),
+      };
+      activeDialogHandle = createScoringReport(container, metrics, {
+        onClose: () => { activeDialogHandle = undefined; },
+      });
+    } : undefined,
   });
 
   return {

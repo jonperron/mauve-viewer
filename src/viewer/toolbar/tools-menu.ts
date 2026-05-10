@@ -2,6 +2,7 @@
 export interface ToolsMenuCallbacks {
   readonly onAlignGenomes?: () => void;
   readonly onOrderContigs?: () => void;
+  readonly onScoreAssembly?: () => void;
 }
 
 /** Handle returned by createToolsMenu for lifecycle management */
@@ -18,6 +19,7 @@ interface ToolsButtonDef {
 const TOOLS_BUTTON_DEFS: readonly ToolsButtonDef[] = [
   { key: 'onAlignGenomes', label: 'Align Genomes' },
   { key: 'onOrderContigs', label: 'Order Contigs' },
+  { key: 'onScoreAssembly', label: 'Score Assembly' },
 ];
 
 /**

@@ -3,11 +3,11 @@
 Defines genome assembly quality evaluation by comparing a draft assembly to a reference genome, computing structural metrics (DCJ/breakpoint/SCJ distances), sequence-level metrics (SNPs, gaps, missed/extra bases), contig statistics (N50/N90), and annotation quality (broken CDS detection).
 ## Requirements
 ### Requirement: Assembly quality scoring
-The system SHALL evaluate the quality of a genome assembly by aligning it to a reference genome and computing structural, sequence, and annotation metrics via the AssemblyScorer.
+The system SHALL evaluate the quality of a genome assembly by comparing it to a reference genome and computing structural, sequence, and annotation metrics client-side from the currently loaded alignment.
 
 #### Scenario: Score assembly via GUI
-- **WHEN** user clicks the ScoreAssembly toolbar button with exactly 2 genomes loaded
-- **THEN** system computes all assembly quality metrics and displays results in an AnalysisDisplayWindow with Summary, SNPs, Gaps, and Broken CDS tabs
+- **WHEN** the user opens the Analysis dropdown menu with exactly 2 genomes loaded and clicks "Score Assembly"
+- **THEN** the system computes all assembly quality metrics client-side (`computeStructuralMetrics`, `computeSequenceMetrics`, `computeContigStats`, `computeCdsQualityMetrics`, `computeContentMetrics`) and displays the results in a `createScoringReport` modal dialog with Structural, Sequence, Contigs, CDS, and Content tabs
 
 #### Scenario: Score assembly via CLI
 - **WHEN** user runs `java -cp Mauve.jar org.gel.mauve.assembly.ScoreAssembly --ref <ref> --draft <draft> --output <dir>`
