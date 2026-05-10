@@ -4,7 +4,7 @@ import { buildApp } from './app.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const PORT = Number(process.env.PORT ?? 3000);
+const PORT = Number(process.env.PORT ?? 8080);
 if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
   throw new RangeError(`Invalid PORT: ${process.env.PORT}`);
 }
