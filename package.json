@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prestart": "npm run build",
     "build": "vite build && tsc -p tsconfig.server.json",
     "build:client": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
     "serve": "npm run build && node dist/server/index.js",
-    "start": "node dist/server/index.js",
+    "start": "NODE_ENV=production node dist/server/index.js",
     "lint": "eslint .",
     "test": "vitest run"
   },
