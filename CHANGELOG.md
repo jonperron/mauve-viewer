@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/jonperron/mauve-viewer/compare/0.6.0...0.6.1) (2026-05-30)
+
+
+### Bug Fixes
+
+* **deployment:** fix deployment on clever cloud ([#81](https://github.com/jonperron/mauve-viewer/issues/81)) ([42bf5db](https://github.com/jonperron/mauve-viewer/commit/42bf5db9199628bf1e30e8c3532698cad2bba7d6))
+* **release:** make release-please using semver ([#78](https://github.com/jonperron/mauve-viewer/issues/78)) ([ad1b698](https://github.com/jonperron/mauve-viewer/commit/ad1b698e25159f3004b406e1085210cc824118fc))
+
 ## [0.6.0](https://github.com/jonperron/mauve-viewer/compare/mauve-viewer-v0.5.0...mauve-viewer-v0.6.0) (2026-05-10)
 
 
