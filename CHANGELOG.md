@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/jonperron/mauve-viewer/compare/0.6.1...0.6.2) (2026-08-11)
+
+
+### Bug Fixes
+
+* **lib:** update fastify ([#89](https://github.com/jonperron/mauve-viewer/issues/89)) ([bd583c9](https://github.com/jonperron/mauve-viewer/commit/bd583c9398c484b89a6e61a2c41d80bbcb6fa402))
+
 ## [0.6.1](https://github.com/jonperron/mauve-viewer/compare/0.6.0...0.6.1) (2026-05-30)
 
 
