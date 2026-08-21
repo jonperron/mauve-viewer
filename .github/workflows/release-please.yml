@@ -20,3 +20,13 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+  docker-build:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker_build.yml
+    with:
+      tag_name: ${{ needs.release-please.outputs.tag_name }}
