@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.3](https://github.com/jonperron/mauve-viewer/compare/0.6.2...0.6.3) (2026-08-21)
+
+
+### Bug Fixes
+
+* **ci:** trigger docker build on release-please releases ([#91](https://github.com/jonperron/mauve-viewer/issues/91)) ([911a862](https://github.com/jonperron/mauve-viewer/commit/911a862ff2e0aadaea210dfc0a2048749b037f1a))
+
 ## [0.6.2](https://github.com/jonperron/mauve-viewer/compare/0.6.1...0.6.2) (2026-08-11)
 
 
