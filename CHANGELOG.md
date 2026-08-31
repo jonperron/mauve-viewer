@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.4](https://github.com/jonperron/mauve-viewer/compare/0.6.3...0.6.4) (2026-08-31)
+
+
+### Bug Fixes
+
+* update package lock ([#94](https://github.com/jonperron/mauve-viewer/issues/94)) ([8c45a72](https://github.com/jonperron/mauve-viewer/commit/8c45a723a81a403b25011aec4600b44a5e645ec3))
+
 ## [0.6.3](https://github.com/jonperron/mauve-viewer/compare/0.6.2...0.6.3) (2026-08-21)
 
 
