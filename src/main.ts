@@ -47,7 +47,16 @@ function loadFiles(files: readonly File[], viewer: HTMLElement): void {
 function renderFooter(): void {
   const footer = document.getElementById('appFooter');
   if (footer) {
-    footer.textContent = `v${__APP_VERSION__}`;
+    const link = document.createElement('a');
+    link.href = 'https://github.com/jonperron/mauve-viewer/issues';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = 'Github';
+
+    footer.replaceChildren(
+      document.createTextNode(`v${__APP_VERSION__} - Report issues on `),
+      link,
+    );
   }
 }
 

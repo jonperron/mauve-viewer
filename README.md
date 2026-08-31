@@ -4,6 +4,8 @@
 
 A modern web reimplementation of the [Mauve](https://github.com/koadman/mauve) genome alignment viewer, inspired by [PATRIC3/mauve-viewer](https://github.com/PATRIC3/mauve-viewer).
 
+Free version is available [online](https://mauve-viewer.blackcatzlab.tech/).
+
 ## Disclaimer
 
 This project is built entirely using Claude Opus 4.6. It follows a specification-driven development approach based on the original Mauve project, using subagents and instruction files to enforce coding standards, testing, and feature completeness. The project in its current state may contain bugs. Bug reports are welcome via [issues](https://github.com/jonperron/mauve-viewer/issues).
