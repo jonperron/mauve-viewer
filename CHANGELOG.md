@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.5](https://github.com/jonperron/mauve-viewer/compare/0.6.4...0.6.5) (2026-08-31)
+
+
+### Bug Fixes
+
+* add a mention about the data policy of the service ([#96](https://github.com/jonperron/mauve-viewer/issues/96)) ([4981247](https://github.com/jonperron/mauve-viewer/commit/49812478dfd51e3845a3b613baa33a535df01a14))
+
 ## [0.6.4](https://github.com/jonperron/mauve-viewer/compare/0.6.3...0.6.4) (2026-08-31)
 
 
