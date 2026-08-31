@@ -53,9 +53,16 @@ function renderFooter(): void {
     link.rel = 'noopener noreferrer';
     link.textContent = 'Github';
 
+    const privacy = document.createElement('div');
+    privacy.textContent =
+      'Data policy: Your files are parsed in your browser. Server-side jobs write them to a ' +
+      'temporary working directory and delete it once the job finishes; nothing ' +
+      'is stored beyond that.';
+
     footer.replaceChildren(
       document.createTextNode(`v${__APP_VERSION__} - Report issues on `),
       link,
+      privacy,
     );
   }
 }
